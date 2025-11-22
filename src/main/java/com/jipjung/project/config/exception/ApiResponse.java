@@ -1,25 +1,15 @@
 package com.jipjung.project.config.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-@Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiResponse<T> {
-
-    private final int code;
-    private final String status;
-    private final String message;
-    private final T data;
-
-    private ApiResponse(int code, String status, String message, T data) {
-        this.code = code;
-        this.status = status;
-        this.message = message;
-        this.data = data;
-    }
-
+public record ApiResponse<T>(
+        int code,
+        String status,
+        String message,
+        T data
+) {
     /**
      * 성공 응답 (데이터 포함)
      */

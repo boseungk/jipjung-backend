@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/error").permitAll()  // 기본 경로
                         .requestMatchers("/test/**", "/health").permitAll()  // 테스트용 경로
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()  // Swagger
+                        .requestMatchers("/api/apartments/favorites/**").authenticated()  // 관심 아파트 - 인증 필요
+                        .requestMatchers("/api/apartments/**").permitAll()  // 아파트 조회 - 공개
                         .anyRequest().authenticated()  // 나머지는 인증 필요
                 )
 

@@ -19,21 +19,21 @@
     <!-- 이메일로 사용자 조회 -->
     <select id="findByEmail" resultMap="UserResultMap">
         SELECT id, email, nickname, password, role, created_at, updated_at
-        FROM user
+        FROM `user`
         WHERE email = #{email}
     </select>
 
     <!-- 사용자 등록 -->
     <insert id="insertUser" parameterType="com.jipjung.project.domain.User"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user (email, nickname, password, role)
+        INSERT INTO `user` (email, nickname, password, role)
         VALUES (#{email}, #{nickname}, #{password}, #{role})
     </insert>
 
     <!-- 이메일 중복 체크 -->
     <select id="existsByEmail" resultType="boolean">
         SELECT COUNT(*) > 0
-        FROM user
+        FROM `user`
         WHERE email = #{email}
     </select>
 

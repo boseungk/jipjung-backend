@@ -20,15 +20,15 @@ public class AuthService {
     @Transactional
     public SignupResponse signup(SignupRequest request) {
         // 이메일 중복 체크
-        if (userMapper.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다: " + request.getEmail());
+        if (userMapper.existsByEmail(request.email())) {
+            throw new IllegalArgumentException("이미 존재하는 이메일입니다: " + request.email());
         }
 
         // User 생성
         User user = User.builder()
-                .email(request.getEmail())
-                .nickname(request.getNickname())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.email())
+                .nickname(request.nickname())
+                .password(passwordEncoder.encode(request.password()))
                 .role(UserRole.USER)
                 .build();
 
