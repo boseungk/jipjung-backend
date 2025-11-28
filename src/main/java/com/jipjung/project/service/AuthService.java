@@ -1,7 +1,7 @@
 package com.jipjung.project.service;
 
 import com.jipjung.project.controller.dto.request.SignupRequest;
-import com.jipjung.project.controller.dto.response.SignupResponse;
+import com.jipjung.project.controller.response.SignupResponse;
 import com.jipjung.project.domain.User;
 import com.jipjung.project.domain.UserRole;
 import com.jipjung.project.repository.UserMapper;

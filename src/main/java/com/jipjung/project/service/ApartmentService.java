@@ -2,8 +2,8 @@ package com.jipjung.project.service;
 
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
 import com.jipjung.project.controller.dto.request.FavoriteRequest;
-import com.jipjung.project.controller.dto.response.ApartmentResponse;
-import com.jipjung.project.controller.dto.response.FavoriteResponse;
+import com.jipjung.project.controller.response.ApartmentResponse;
+import com.jipjung.project.controller.response.FavoriteResponse;
 import com.jipjung.project.domain.ApartmentTransaction;
 import com.jipjung.project.domain.FavoriteApartment;
 import com.jipjung.project.repository.ApartmentMapper;
