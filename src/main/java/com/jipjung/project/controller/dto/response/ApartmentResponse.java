@@ -1,4 +1,4 @@
-package com.jipjung.project.controller.response;
+package com.jipjung.project.controller.dto.response;
 
 import com.jipjung.project.domain.ApartmentTransaction;
 import io.swagger.v3.oas.annotations.media.Schema;

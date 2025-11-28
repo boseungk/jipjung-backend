@@ -1,6 +1,6 @@
 package com.jipjung.project.repository;
 
-import com.jipjung.project.controller.request.ApartmentSearchRequest;
+import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
 import com.jipjung.project.domain.ApartmentTransaction;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

@@ -1,4 +1,4 @@
-package com.jipjung.project.controller.request;
+package com.jipjung.project.controller.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
