@@ -10,16 +10,16 @@
 -- 1. Database Setup
 -- ============================================================================
 
--- Character Set 설정
-SET NAMES utf8mb4;
-SET CHARACTER_SET_CLIENT = utf8mb4;
-SET CHARACTER_SET_CONNECTION = utf8mb4;
-SET CHARACTER_SET_RESULTS = utf8mb4;
+-- Character Set 설정 (MySQL only - H2에서는 주석 처리)
+-- SET NAMES utf8mb4;
+-- SET CHARACTER_SET_CLIENT = utf8mb4;
+-- SET CHARACTER_SET_CONNECTION = utf8mb4;
+-- SET CHARACTER_SET_RESULTS = utf8mb4;
 
-USE jipjung;
-SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
-SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
-SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+-- USE jipjung;
+-- SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+-- SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+-- SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
 -- ============================================================================
 -- 2. Drop Tables (in reverse dependency order)
@@ -28,7 +28,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 DROP TABLE IF EXISTS favorite_apartment;
 DROP TABLE IF EXISTS apartment_deal;
 DROP TABLE IF EXISTS apartment;
-DROP TABLE IF EXISTS user;
+DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS dongcode;
 
 -- ============================================================================
@@ -90,13 +90,20 @@ CREATE TABLE apartment_deal (
     deal_month INT NOT NULL COMMENT '거래월',
     deal_day INT NOT NULL COMMENT '거래일',
     deal_date DATE GENERATED ALWAYS AS (
-        STR_TO_DATE(CONCAT(deal_year, '-', LPAD(deal_month, 2, '0'), '-', LPAD(deal_day, 2, '0')), '%Y-%m-%d')
-    ) STORED COMMENT '거래일자 (생성컬럼)',
+        PARSEDATETIME(
+            CONCAT(
+                CAST(deal_year AS VARCHAR), '-',
+                LPAD(CAST(deal_month AS VARCHAR), 2, '0'), '-',
+                LPAD(CAST(deal_day AS VARCHAR), 2, '0')
+            ),
+            'yyyy-MM-dd'
+        )
+    ) COMMENT '거래일자 (생성컬럼)',
     exclu_use_ar DECIMAL(7,2) NOT NULL COMMENT '전용면적(㎡)',
     deal_amount VARCHAR(10) NOT NULL COMMENT '거래금액(만원)',
     deal_amount_num BIGINT GENERATED ALWAYS AS (
-        CAST(REPLACE(deal_amount, ',', '') AS UNSIGNED)
-    ) STORED COMMENT '거래금액(숫자)',
+        CAST(REGEXP_REPLACE(deal_amount, ',', '') AS BIGINT)
+    ) COMMENT '거래금액(숫자)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (apt_seq) REFERENCES apartment(apt_seq) ON DELETE CASCADE,
@@ -109,7 +116,7 @@ COMMENT='아파트 실거래 정보 테이블';
 -- ----------------------------------------------------------------------------
 -- 3.4 user - 사용자 테이블 (OAuth 지원)
 -- ----------------------------------------------------------------------------
-CREATE TABLE user (
+CREATE TABLE `user` (
     user_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 ID',
     email VARCHAR(100) UNIQUE NOT NULL COMMENT '이메일',
     password VARCHAR(255) COMMENT '암호화된 비밀번호 (OAuth 사용자는 NULL 가능)',
@@ -145,7 +152,7 @@ CREATE TABLE favorite_apartment (
     apt_seq VARCHAR(20) NOT NULL COMMENT '아파트코드',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
     FOREIGN KEY (apt_seq) REFERENCES apartment(apt_seq) ON DELETE CASCADE,
     UNIQUE KEY uk_user_apt (user_id, apt_seq)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -155,15 +162,15 @@ COMMENT='관심 아파트 테이블';
 -- 4. Restore Settings
 -- ============================================================================
 
-SET SQL_MODE=@OLD_SQL_MODE;
-SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
-SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+-- SET SQL_MODE=@OLD_SQL_MODE;
+-- SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+-- SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
 -- ============================================================================
 -- 5. Verify Tables Created
 -- ============================================================================
 
-SHOW TABLES;
+-- SHOW TABLES;
 
 -- ============================================================================
 -- End of Schema DDL

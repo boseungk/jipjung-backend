@@ -2,6 +2,7 @@ package com.jipjung.project.config.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
@@ -11,60 +12,81 @@ public record ApiResponse<T>(
         T data
 ) {
     /**
-     * 성공 응답 (데이터 포함)
+     * 본문만 필요한 경우 사용 (필터, 핸들러 등에서 직접 쓰기 위함)
      */
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(
-                HttpStatus.OK.value(),
-                HttpStatus.OK.name(),
-                "성공",
-                data
-        );
+    public static <T> ApiResponse<T> successBody(T data) {
+        return body(HttpStatus.OK, "성공", data);
+    }
+
+    public static ApiResponse<Void> successBody() {
+        return successBody(null);
+    }
+
+    public static <T> ApiResponse<T> errorBody(HttpStatus status, String message) {
+        return body(status, message, null);
+    }
+
+    public static <T> ApiResponse<T> errorBody(HttpStatus status, String message, T data) {
+        return body(status, message, data);
+    }
+
+    public static <T> ApiResponse<T> errorBody(ErrorCode errorCode) {
+        HttpStatus status = HttpStatus.valueOf(errorCode.getStatus());
+        return body(status, errorCode.getMessage(), null);
     }
 
     /**
-     * 성공 응답 (데이터 없음)
+     * 컨트롤러/예외 핸들러에서 사용: HTTP 상태까지 함께 설정
      */
-    public static <T> ApiResponse<T> success() {
-        return new ApiResponse<>(
-                HttpStatus.OK.value(),
-                HttpStatus.OK.name(),
-                "성공",
-                null
-        );
+    public static <T> ResponseEntity<ApiResponse<T>> success(T data) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(successBody(data));
     }
 
-    /**
-     * 에러 응답
-     */
-    public static <T> ApiResponse<T> error(int code, String message) {
-        return new ApiResponse<>(
-                code,
-                HttpStatus.valueOf(code).name(),
-                message,
-                null
-        );
+    public static ResponseEntity<ApiResponse<Void>> success() {
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(successBody());
     }
 
-    /**
-     * 에러 응답 (ErrorCode 사용)
-     */
-    public static <T> ApiResponse<T> error(ErrorCode errorCode) {
-        return new ApiResponse<>(
-                errorCode.getStatus(),
-                HttpStatus.valueOf(errorCode.getStatus()).name(),
-                errorCode.getMessage(),
-                null
-        );
+    public static <T> ResponseEntity<ApiResponse<T>> created(T data) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(body(HttpStatus.CREATED, "성공", data));
     }
 
-    /**
-     * 에러 응답 (데이터 포함)
-     */
-    public static <T> ApiResponse<T> error(int code, String message, T data) {
+    public static ResponseEntity<ApiResponse<Void>> created() {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(body(HttpStatus.CREATED, "성공", null));
+    }
+
+    public static <T> ResponseEntity<ApiResponse<T>> error(HttpStatus status, String message) {
+        return ResponseEntity.status(status)
+                .body(errorBody(status, message));
+    }
+
+    public static <T> ResponseEntity<ApiResponse<T>> error(HttpStatus status, String message, T data) {
+        return ResponseEntity.status(status)
+                .body(errorBody(status, message, data));
+    }
+
+    public static <T> ResponseEntity<ApiResponse<T>> error(int code, String message) {
+        HttpStatus status = HttpStatus.valueOf(code);
+        return error(status, message);
+    }
+
+    public static <T> ResponseEntity<ApiResponse<T>> error(int code, String message, T data) {
+        HttpStatus status = HttpStatus.valueOf(code);
+        return error(status, message, data);
+    }
+
+    public static ResponseEntity<ApiResponse<Void>> error(ErrorCode errorCode) {
+        HttpStatus status = HttpStatus.valueOf(errorCode.getStatus());
+        return error(status, errorCode.getMessage());
+    }
+
+    private static <T> ApiResponse<T> body(HttpStatus status, String message, T data) {
         return new ApiResponse<>(
-                code,
-                HttpStatus.valueOf(code).name(),
+                status.value(),
+                status.name(),
                 message,
                 data
         );

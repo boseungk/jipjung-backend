@@ -7,7 +7,7 @@
 
     <!-- Result Map -->
     <resultMap id="UserResultMap" type="com.jipjung.project.domain.User">
-        <id property="id" column="id"/>
+        <id property="id" column="user_id"/>
         <result property="email" column="email"/>
         <result property="nickname" column="nickname"/>
         <result property="password" column="password"/>
@@ -18,14 +18,14 @@
 
     <!-- 이메일로 사용자 조회 -->
     <select id="findByEmail" resultMap="UserResultMap">
-        SELECT id, email, nickname, password, role, created_at, updated_at
+        SELECT user_id, email, nickname, password, role, created_at, updated_at
         FROM `user`
         WHERE email = #{email}
     </select>
 
     <!-- 사용자 등록 -->
     <insert id="insertUser" parameterType="com.jipjung.project.domain.User"
-            useGeneratedKeys="true" keyProperty="id">
+            useGeneratedKeys="true" keyProperty="id" keyColumn="user_id">
         INSERT INTO `user` (email, nickname, password, role)
         VALUES (#{email}, #{nickname}, #{password}, #{role})
     </insert>

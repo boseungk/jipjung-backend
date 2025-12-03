@@ -275,7 +275,8 @@ src/main/java/com/jipjung/project/
 ├── domain/                     # 도메인 모델
 │   ├── User.java               # 사용자
 │   ├── UserRole.java           # 권한 (USER, ADMIN, GUEST)
-│   ├── ApartmentTransaction.java # 실거래가
+│   ├── Apartment.java          # 아파트 기본정보
+│   ├── ApartmentDeal.java      # 실거래가
 │   └── FavoriteApartment.java  # 관심 아파트
 ├── repository/                 # 데이터 접근 (MyBatis)
 │   ├── UserMapper.java

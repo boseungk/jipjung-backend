@@ -54,11 +54,15 @@ public class SecurityConfig {
                 // HTTP Basic 비활성화
                 .httpBasic(AbstractHttpConfigurer::disable)
 
+                // H2 콘솔을 위한 설정
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // 인증 관련 모두 허용
                         .requestMatchers("/", "/error").permitAll()  // 기본 경로
                         .requestMatchers("/test/**", "/health").permitAll()  // 테스트용 경로
+                        .requestMatchers("/h2-console/**").permitAll()  // H2 콘솔
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()  // Swagger
                         .requestMatchers("/api/apartments/favorites/**").authenticated()  // 관심 아파트 - 인증 필요
                         .requestMatchers("/api/apartments/**").permitAll()  // 아파트 조회 - 공개

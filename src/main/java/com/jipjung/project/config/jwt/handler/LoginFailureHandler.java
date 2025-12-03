@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 
@@ -29,8 +30,8 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
         response.setCharacterEncoding("UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
-        ApiResponse<Void> apiResponse = ApiResponse.error(
-                HttpServletResponse.SC_UNAUTHORIZED,
+        ApiResponse<Void> apiResponse = ApiResponse.errorBody(
+                HttpStatus.UNAUTHORIZED,
                 "로그인 실패: 이메일 또는 비밀번호가 올바르지 않습니다."
         );
 

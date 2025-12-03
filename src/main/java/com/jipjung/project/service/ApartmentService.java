@@ -5,9 +5,10 @@ import com.jipjung.project.config.exception.ErrorCode;
 import com.jipjung.project.config.exception.ResourceNotFoundException;
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
 import com.jipjung.project.controller.dto.request.FavoriteRequest;
-import com.jipjung.project.controller.response.ApartmentDetailResponse;
-import com.jipjung.project.controller.response.ApartmentListResponse;
-import com.jipjung.project.controller.response.FavoriteResponse;
+import com.jipjung.project.controller.dto.response.ApartmentDetailResponse;
+import com.jipjung.project.controller.dto.response.ApartmentListPageResponse;
+import com.jipjung.project.controller.dto.response.ApartmentListResponse;
+import com.jipjung.project.controller.dto.response.FavoriteResponse;
 import com.jipjung.project.domain.Apartment;
 import com.jipjung.project.domain.FavoriteApartment;
 import com.jipjung.project.repository.ApartmentMapper;
@@ -16,9 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,23 +30,23 @@ public class ApartmentService {
      * 아파트 목록 조회 (검색 및 페이징)
      * 각 아파트의 최신 실거래 1건 포함
      */
-    public Map<String, Object> searchApartments(ApartmentSearchRequest request) {
-        ApartmentSearchRequest offsetRequest = createOffsetRequest(request);
-
-        List<Apartment> apartments = apartmentMapper.findAllWithLatestDeal(offsetRequest);
+    @Transactional(readOnly = true)
+    public ApartmentListPageResponse searchApartments(ApartmentSearchRequest request) {
+        List<Apartment> apartments = apartmentMapper.findAllWithLatestDeal(request);
         int totalCount = apartmentMapper.count(request);
 
         List<ApartmentListResponse> responses = apartments.stream()
                 .map(apt -> ApartmentListResponse.from(apt, apt.getLatestDeal()))
                 .toList();
 
-        return createPageResponse(responses, totalCount, request.page(), request.size());
+        return ApartmentListPageResponse.of(responses, totalCount, request.page(), request.size());
     }
 
     /**
      * 아파트 상세 조회
      * 해당 아파트의 모든 실거래 이력 포함
      */
+    @Transactional(readOnly = true)
     public ApartmentDetailResponse getApartmentDetail(String aptSeq) {
         Apartment apartment = apartmentMapper.findByAptSeqWithDeals(aptSeq)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.APARTMENT_NOT_FOUND));
@@ -63,11 +62,7 @@ public class ApartmentService {
         validateApartmentExists(request.aptSeq());
         validateFavoriteNotDuplicate(userId, request.aptSeq());
 
-        FavoriteApartment favorite = FavoriteApartment.builder()
-                .userId(userId)
-                .aptSeq(request.aptSeq())
-                .build();
-
+        FavoriteApartment favorite = createFavorite(userId, request);
         favoriteApartmentMapper.insert(favorite);
 
         FavoriteApartment savedFavorite = favoriteApartmentMapper.findById(favorite.getId())
@@ -76,9 +71,17 @@ public class ApartmentService {
         return FavoriteResponse.from(savedFavorite);
     }
 
+    private FavoriteApartment createFavorite(Long userId, FavoriteRequest request) {
+        return FavoriteApartment.builder()
+                .userId(userId)
+                .aptSeq(request.aptSeq())
+                .build();
+    }
+
     /**
      * 내 관심 아파트 목록 조회
      */
+    @Transactional(readOnly = true)
     public List<FavoriteResponse> getMyFavorites(Long userId) {
         return favoriteApartmentMapper.findByUserId(userId).stream()
                 .map(FavoriteResponse::from)
@@ -96,37 +99,6 @@ public class ApartmentService {
         validateFavoriteOwnership(favorite, userId);
 
         favoriteApartmentMapper.deleteById(favoriteId);
-    }
-
-    /**
-     * offset 요청 객체 생성
-     */
-    private ApartmentSearchRequest createOffsetRequest(ApartmentSearchRequest request) {
-        int offset = request.page() * request.size();
-        return new ApartmentSearchRequest(
-                request.aptNm(),
-                request.umdNm(),
-                request.dealDateFrom(),
-                request.dealDateTo(),
-                request.minDealAmount(),
-                request.maxDealAmount(),
-                offset,
-                request.size()
-        );
-    }
-
-    /**
-     * 페이징 응답 생성
-     */
-    private Map<String, Object> createPageResponse(List<ApartmentListResponse> data,
-                                                    int totalCount, int page, int size) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("apartments", data);
-        response.put("totalCount", totalCount);
-        response.put("page", page);
-        response.put("size", size);
-        response.put("totalPages", (int) Math.ceil((double) totalCount / size));
-        return response;
     }
 
     /**

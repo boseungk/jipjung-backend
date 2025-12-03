@@ -3,8 +3,8 @@ package com.jipjung.project.controller;
 import com.jipjung.project.config.exception.ApiResponse;
 import com.jipjung.project.controller.dto.request.LoginRequest;
 import com.jipjung.project.controller.dto.request.SignupRequest;
-import com.jipjung.project.controller.response.LoginResponse;
-import com.jipjung.project.controller.response.SignupResponse;
+import com.jipjung.project.controller.dto.response.LoginResponse;
+import com.jipjung.project.controller.dto.response.SignupResponse;
 import com.jipjung.project.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "인증", description = "회원가입, 로그인 API")
@@ -45,10 +45,9 @@ public class AuthController {
             )
     })
     @PostMapping("/signup")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<ApiResponse<SignupResponse>> signup(@Valid @RequestBody SignupRequest request) {
         SignupResponse response = authService.signup(request);
-        return ApiResponse.success(response);
+        return ApiResponse.created(response);
     }
 
     @Operation(
@@ -69,7 +68,7 @@ public class AuthController {
             )
     })
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request) {
         // 이 메서드는 실제로 호출되지 않습니다.
         // CustomJsonUsernamePasswordAuthenticationFilter가 가로채서 처리합니다.
         // Swagger 문서화를 위한 더미 메서드입니다.

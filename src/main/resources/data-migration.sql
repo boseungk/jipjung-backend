@@ -5,14 +5,14 @@
 -- Version: 1.0
 -- Created: 2025-11-28
 -- ============================================================================
-use jipjung
--- Character Set 설정
-SET NAMES utf8mb4;
-SET CHARACTER_SET_CLIENT = utf8mb4;
-SET CHARACTER_SET_CONNECTION = utf8mb4;
-SET CHARACTER_SET_RESULTS = utf8mb4;
+-- use jipjung
+-- Character Set 설정 (MySQL only - H2에서는 주석 처리)
+-- SET NAMES utf8mb4;
+-- SET CHARACTER_SET_CLIENT = utf8mb4;
+-- SET CHARACTER_SET_CONNECTION = utf8mb4;
+-- SET CHARACTER_SET_RESULTS = utf8mb4;
 
-SET FOREIGN_KEY_CHECKS = 0;
+-- SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================================
 -- 1. dongcode 데이터 로드 (49개)
@@ -153,7 +153,7 @@ INSERT INTO apartment_deal (apt_seq, apt_dong, floor, deal_year, deal_month, dea
 ('11545-23', ' ', '17', 2017, 12, 9, 59.82, '33,000'),
 ('27230-174', ' ', '2', 2011, 12, 28, 59.84, '11,800');
 
-SET FOREIGN_KEY_CHECKS = 1;
+-- SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================================
 -- 4. 데이터 로드 검증

@@ -31,13 +31,11 @@ public class GlobalExceptionHandler {
 
         log.warn("Validation error: {}", errors);
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(
-                        HttpStatus.BAD_REQUEST.value(),
-                        "입력 값 검증 실패",
-                        errors
-                ));
+        return ApiResponse.error(
+                HttpStatus.BAD_REQUEST,
+                "입력 값 검증 실패",
+                errors
+        );
     }
 
     /**
@@ -46,9 +44,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicateEmailException(DuplicateEmailException e) {
         log.warn("Duplicate email: {}", e.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(ErrorCode.DUPLICATE_EMAIL));
+        return ApiResponse.error(ErrorCode.DUPLICATE_EMAIL);
     }
 
     /**
@@ -57,9 +53,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(ResourceNotFoundException e) {
         log.warn("Resource not found: {}", e.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(e.getErrorCode()));
+        return ApiResponse.error(e.getErrorCode());
     }
 
     /**
@@ -68,9 +62,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicateResourceException(DuplicateResourceException e) {
         log.warn("Duplicate resource: {}", e.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(e.getErrorCode()));
+        return ApiResponse.error(e.getErrorCode());
     }
 
     /**
@@ -79,9 +71,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("IllegalArgument: {}", e.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(), e.getMessage()));
+        return ApiResponse.error(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     /**
@@ -90,8 +80,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unexpected error", e);
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR));
+        return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 }

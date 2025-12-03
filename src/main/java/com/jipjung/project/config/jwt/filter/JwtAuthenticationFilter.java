@@ -23,7 +23,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String LOGIN_URL = "/api/auth/login";
+    private static final String AUTH_PATH = "/api/auth";
 
     private final JwtProvider jwtProvider;
     private final LoginService loginService;
@@ -32,8 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 로그인 URL은 필터를 건너뜀
-        if (request.getRequestURI().equals(LOGIN_URL)) {
+        // 인증 관련 URL은 필터를 건너뜀 (회원가입, 로그인 등)
+        if (request.getRequestURI().startsWith(AUTH_PATH)) {
             filterChain.doFilter(request, response);
             return;
         }

@@ -3,8 +3,9 @@ package com.jipjung.project.controller;
 import com.jipjung.project.config.exception.ApiResponse;
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
 import com.jipjung.project.controller.dto.request.FavoriteRequest;
-import com.jipjung.project.controller.response.ApartmentDetailResponse;
-import com.jipjung.project.controller.response.FavoriteResponse;
+import com.jipjung.project.controller.dto.response.ApartmentDetailResponse;
+import com.jipjung.project.controller.dto.response.ApartmentListPageResponse;
+import com.jipjung.project.controller.dto.response.FavoriteResponse;
 import com.jipjung.project.service.ApartmentService;
 import com.jipjung.project.service.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,12 +17,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @Tag(name = "아파트", description = "아파트 실거래가 조회 및 관심 아파트 관리 API")
 @RestController
@@ -41,13 +41,13 @@ public class ApartmentController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = Map.class))
+                    content = @Content(schema = @Schema(implementation = ApartmentListPageResponse.class))
             )
     })
     @GetMapping
-    public ApiResponse<Map<String, Object>> searchApartments(
+    public ResponseEntity<ApiResponse<ApartmentListPageResponse>> searchApartments(
             @Parameter(description = "검색 조건") ApartmentSearchRequest request) {
-        Map<String, Object> result = apartmentService.searchApartments(request);
+        ApartmentListPageResponse result = apartmentService.searchApartments(request);
         return ApiResponse.success(result);
     }
 
@@ -67,7 +67,7 @@ public class ApartmentController {
             )
     })
     @GetMapping("/{aptSeq}")
-    public ApiResponse<ApartmentDetailResponse> getApartmentDetail(
+    public ResponseEntity<ApiResponse<ApartmentDetailResponse>> getApartmentDetail(
             @Parameter(description = "아파트 코드", example = "11410-61") @PathVariable String aptSeq) {
         ApartmentDetailResponse response = apartmentService.getApartmentDetail(aptSeq);
         return ApiResponse.success(response);
@@ -96,13 +96,12 @@ public class ApartmentController {
             )
     })
     @PostMapping("/favorites")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<FavoriteResponse> addFavorite(
+    public ResponseEntity<ApiResponse<FavoriteResponse>> addFavorite(
             @Valid @RequestBody FavoriteRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
         FavoriteResponse response = apartmentService.addFavorite(userId, request);
-        return ApiResponse.success(response);
+        return ApiResponse.created(response);
     }
 
     @Operation(
@@ -123,7 +122,7 @@ public class ApartmentController {
             )
     })
     @GetMapping("/favorites")
-    public ApiResponse<List<FavoriteResponse>> getMyFavorites(
+    public ResponseEntity<ApiResponse<List<FavoriteResponse>>> getMyFavorites(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
         List<FavoriteResponse> favorites = apartmentService.getMyFavorites(userId);
@@ -156,7 +155,7 @@ public class ApartmentController {
             )
     })
     @DeleteMapping("/favorites/{id}")
-    public ApiResponse<Void> deleteFavorite(
+    public ResponseEntity<ApiResponse<Void>> deleteFavorite(
             @Parameter(description = "관심 아파트 ID") @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
