@@ -9,83 +9,72 @@
     <resultMap id="FavoriteApartmentResultMap" type="com.jipjung.project.domain.FavoriteApartment">
         <id property="id" column="favorite_id"/>
         <result property="userId" column="user_id"/>
-        <result property="apartmentTransactionId" column="apartment_transaction_id"/>
+        <result property="aptSeq" column="apt_seq"/>
         <result property="createdAt" column="favorite_created_at"/>
-        <association property="apartmentTransaction" javaType="com.jipjung.project.domain.ApartmentTransaction">
-            <id property="id" column="apt_id"/>
-            <result property="apartmentName" column="apartment_name"/>
-            <result property="legalDong" column="legal_dong"/>
-            <result property="roadAddress" column="road_address"/>
+        <association property="apartment" javaType="com.jipjung.project.domain.Apartment">
+            <id property="aptSeq" column="apt_seq"/>
+            <result property="aptNm" column="apt_nm"/>
+            <result property="umdNm" column="umd_nm"/>
+            <result property="roadNm" column="road_nm"/>
             <result property="buildYear" column="build_year"/>
-            <result property="dealAmount" column="deal_amount"/>
-            <result property="dealDate" column="deal_date"/>
-            <result property="exclusiveArea" column="exclusive_area"/>
-            <result property="floor" column="floor"/>
-            <result property="createdAt" column="apt_created_at"/>
+            <result property="latitude" column="latitude"/>
+            <result property="longitude" column="longitude"/>
         </association>
     </resultMap>
 
     <!-- 관심 아파트 등록 -->
     <insert id="insert" parameterType="com.jipjung.project.domain.FavoriteApartment"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO favorite_apartment (user_id, apartment_transaction_id)
-        VALUES (#{userId}, #{apartmentTransactionId})
+        INSERT INTO favorite_apartment (user_id, apt_seq)
+        VALUES (#{userId}, #{aptSeq})
     </insert>
 
     <!-- 사용자별 관심 아파트 목록 조회 (아파트 정보 포함) -->
     <select id="findByUserId" resultMap="FavoriteApartmentResultMap">
-        SELECT f.id as favorite_id,
+        SELECT f.favorite_id,
                f.user_id,
-               f.apartment_transaction_id,
+               f.apt_seq,
                f.created_at as favorite_created_at,
-               a.id as apt_id,
-               a.apartment_name,
-               a.legal_dong,
-               a.road_address,
+               a.apt_nm,
+               a.umd_nm,
+               a.road_nm,
                a.build_year,
-               a.deal_amount,
-               a.deal_date,
-               a.exclusive_area,
-               a.floor,
-               a.created_at as apt_created_at
+               a.latitude,
+               a.longitude
         FROM favorite_apartment f
-        INNER JOIN apartment_transaction a ON f.apartment_transaction_id = a.id
+        INNER JOIN apartment a ON f.apt_seq = a.apt_seq
         WHERE f.user_id = #{userId}
         ORDER BY f.created_at DESC
     </select>
 
     <!-- 관심 아파트 상세 조회 -->
     <select id="findById" resultMap="FavoriteApartmentResultMap">
-        SELECT f.id as favorite_id,
+        SELECT f.favorite_id,
                f.user_id,
-               f.apartment_transaction_id,
+               f.apt_seq,
                f.created_at as favorite_created_at,
-               a.id as apt_id,
-               a.apartment_name,
-               a.legal_dong,
-               a.road_address,
+               a.apt_nm,
+               a.umd_nm,
+               a.road_nm,
                a.build_year,
-               a.deal_amount,
-               a.deal_date,
-               a.exclusive_area,
-               a.floor,
-               a.created_at as apt_created_at
+               a.latitude,
+               a.longitude
         FROM favorite_apartment f
-        INNER JOIN apartment_transaction a ON f.apartment_transaction_id = a.id
-        WHERE f.id = #{id}
+        INNER JOIN apartment a ON f.apt_seq = a.apt_seq
+        WHERE f.favorite_id = #{id}
     </select>
 
     <!-- 관심 아파트 삭제 -->
     <delete id="deleteById">
         DELETE FROM favorite_apartment
-        WHERE id = #{id}
+        WHERE favorite_id = #{id}
     </delete>
 
     <!-- 중복 체크 -->
-    <select id="existsByUserIdAndApartmentId" resultType="boolean">
+    <select id="existsByUserIdAndAptSeq" resultType="boolean">
         SELECT COUNT(*) > 0
         FROM favorite_apartment
-        WHERE user_id = #{userId} AND apartment_transaction_id = #{apartmentTransactionId}
+        WHERE user_id = #{userId} AND apt_seq = #{aptSeq}
     </select>
 
 </mapper>

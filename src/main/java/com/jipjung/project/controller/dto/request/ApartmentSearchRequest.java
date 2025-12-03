@@ -1,36 +1,22 @@
 package com.jipjung.project.controller.dto.request;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-
-@Schema(description = "아파트 실거래가 검색 요청")
+/**
+ * 아파트 검색 요청 DTO
+ * schema.sql의 apartment + apartment_deal 테이블 기준
+ */
 public record ApartmentSearchRequest(
-        @Schema(description = "법정동 (검색어)", example = "강남구")
-        String legalDong,
-
-        @Schema(description = "아파트명 (검색어)", example = "래미안")
-        String apartmentName,
-
-        @Schema(description = "거래일 시작일 (YYYY-MM-DD)", example = "2024-01-01")
-        String dealDateFrom,
-
-        @Schema(description = "거래일 종료일 (YYYY-MM-DD)", example = "2024-12-31")
-        String dealDateTo,
-
-        @Schema(description = "최소 거래금액 (만원)", example = "50000")
-        Long minDealAmount,
-
-        @Schema(description = "최대 거래금액 (만원)", example = "200000")
-        Long maxDealAmount,
-
-        @Schema(description = "페이지 번호 (0부터 시작)", example = "0")
-        Integer page,
-
-        @Schema(description = "페이지 크기", example = "10")
-        Integer size
+        String aptNm,           // 아파트명 (apartment.apt_nm)
+        String umdNm,           // 읍면동명 (apartment.umd_nm)
+        String dealDateFrom,    // 거래일 시작 (apartment_deal.deal_date)
+        String dealDateTo,      // 거래일 종료
+        Long minDealAmount,     // 최소 거래금액 (만원, apartment_deal.deal_amount_num)
+        Long maxDealAmount,     // 최대 거래금액 (만원)
+        Integer page,           // 페이지 번호 (0부터 시작)
+        Integer size            // 페이지 크기
 ) {
     public ApartmentSearchRequest {
         // 기본값 설정
-        if (page == null) page = 0;
-        if (size == null) size = 10;
+        page = (page != null && page >= 0) ? page : 0;
+        size = (size != null && size > 0 && size <= 100) ? size : 10;
     }
 }
