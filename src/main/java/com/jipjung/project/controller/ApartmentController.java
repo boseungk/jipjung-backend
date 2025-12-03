@@ -3,7 +3,7 @@ package com.jipjung.project.controller;
 import com.jipjung.project.config.exception.ApiResponse;
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
 import com.jipjung.project.controller.dto.request.FavoriteRequest;
-import com.jipjung.project.controller.response.ApartmentResponse;
+import com.jipjung.project.controller.response.ApartmentDetailResponse;
 import com.jipjung.project.controller.response.FavoriteResponse;
 import com.jipjung.project.service.ApartmentService;
 import com.jipjung.project.service.CustomUserDetails;
@@ -32,9 +32,9 @@ public class ApartmentController {
     private final ApartmentService apartmentService;
 
     @Operation(
-            summary = "아파트 실거래가 목록 조회",
-            description = "검색 조건에 따라 아파트 실거래가 목록을 조회합니다.\n\n" +
-                    "**검색 조건**: 법정동, 아파트명, 거래일, 거래금액 등으로 필터링 가능\n\n" +
+            summary = "아파트 목록 조회",
+            description = "검색 조건에 따라 아파트 목록을 조회합니다. 각 아파트의 최신 실거래가 1건이 포함됩니다.\n\n" +
+                    "**검색 조건**: 아파트명, 읍면동명, 거래일, 거래금액 등으로 필터링 가능\n\n" +
                     "**페이징**: page와 size 파라미터로 페이징 처리"
     )
     @ApiResponses({
@@ -52,31 +52,32 @@ public class ApartmentController {
     }
 
     @Operation(
-            summary = "아파트 실거래가 상세 조회",
-            description = "특정 아파트 실거래가의 상세 정보를 조회합니다."
+            summary = "아파트 상세 조회",
+            description = "특정 아파트의 상세 정보와 모든 실거래 이력을 조회합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = ApartmentResponse.class))
+                    content = @Content(schema = @Schema(implementation = ApartmentDetailResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "아파트 실거래가 정보를 찾을 수 없음"
+                    description = "아파트를 찾을 수 없음"
             )
     })
-    @GetMapping("/{id}")
-    public ApiResponse<ApartmentResponse> getApartmentById(
-            @Parameter(description = "아파트 실거래가 ID") @PathVariable Long id) {
-        ApartmentResponse response = apartmentService.getApartmentById(id);
+    @GetMapping("/{aptSeq}")
+    public ApiResponse<ApartmentDetailResponse> getApartmentDetail(
+            @Parameter(description = "아파트 코드", example = "11410-61") @PathVariable String aptSeq) {
+        ApartmentDetailResponse response = apartmentService.getApartmentDetail(aptSeq);
         return ApiResponse.success(response);
     }
 
     @Operation(
             summary = "관심 아파트 등록",
             description = "아파트를 관심 목록에 추가합니다.\n\n" +
-                    "**인증 필요**: JWT 토큰 필요 (Authorization 헤더에 Bearer 토큰)",
+                    "**인증 필요**: JWT 토큰 필요 (Authorization 헤더에 Bearer 토큰)\n\n" +
+                    "**아파트 단위 저장**: apt_seq 기준으로 아파트 자체를 즐겨찾기",
             security = @SecurityRequirement(name = "Bearer Authentication")
     )
     @ApiResponses({

@@ -5,66 +5,214 @@
 
 <mapper namespace="com.jipjung.project.repository.ApartmentMapper">
 
-    <!-- Result Map -->
-    <resultMap id="ApartmentTransactionResultMap" type="com.jipjung.project.domain.ApartmentTransaction">
-        <id property="id" column="id"/>
-        <result property="apartmentName" column="apartment_name"/>
-        <result property="legalDong" column="legal_dong"/>
-        <result property="roadAddress" column="road_address"/>
+    <!-- Result Map - Apartment -->
+    <resultMap id="ApartmentResultMap" type="com.jipjung.project.domain.Apartment">
+        <id property="aptSeq" column="apt_seq"/>
+        <result property="dongCode" column="dong_code"/>
+        <result property="sggCd" column="sgg_cd"/>
+        <result property="umdCd" column="umd_cd"/>
+        <result property="umdNm" column="umd_nm"/>
+        <result property="jibun" column="jibun"/>
+        <result property="roadNmSggCd" column="road_nm_sgg_cd"/>
+        <result property="roadNm" column="road_nm"/>
+        <result property="roadNmBonbun" column="road_nm_bonbun"/>
+        <result property="roadNmBubun" column="road_nm_bubun"/>
+        <result property="aptNm" column="apt_nm"/>
         <result property="buildYear" column="build_year"/>
-        <result property="dealAmount" column="deal_amount"/>
-        <result property="dealDate" column="deal_date"/>
-        <result property="exclusiveArea" column="exclusive_area"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="createdAt" column="apt_created_at"/>
+        <result property="updatedAt" column="apt_updated_at"/>
+    </resultMap>
+
+    <!-- Result Map - ApartmentDeal -->
+    <resultMap id="ApartmentDealResultMap" type="com.jipjung.project.domain.ApartmentDeal">
+        <id property="dealNo" column="deal_no"/>
+        <result property="aptSeq" column="apt_seq"/>
+        <result property="aptDong" column="apt_dong"/>
         <result property="floor" column="floor"/>
-        <result property="createdAt" column="created_at"/>
+        <result property="dealYear" column="deal_year"/>
+        <result property="dealMonth" column="deal_month"/>
+        <result property="dealDay" column="deal_day"/>
+        <result property="dealDate" column="deal_date"/>
+        <result property="excluUseAr" column="exclu_use_ar"/>
+        <result property="dealAmount" column="deal_amount"/>
+        <result property="dealAmountNum" column="deal_amount_num"/>
+        <result property="createdAt" column="deal_created_at"/>
+    </resultMap>
+
+    <!-- Result Map - Apartment + Latest Deal (목록용) -->
+    <resultMap id="ApartmentWithLatestDealMap" type="com.jipjung.project.domain.Apartment">
+        <id property="aptSeq" column="apt_seq"/>
+        <result property="aptNm" column="apt_nm"/>
+        <result property="umdNm" column="umd_nm"/>
+        <result property="roadNm" column="road_nm"/>
+        <result property="buildYear" column="build_year"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="createdAt" column="apt_created_at"/>
+        <result property="updatedAt" column="apt_updated_at"/>
+        <association property="latestDeal" javaType="com.jipjung.project.domain.ApartmentDeal">
+            <id property="dealNo" column="deal_no"/>
+            <result property="dealDate" column="deal_date"/>
+            <result property="dealAmountNum" column="deal_amount_num"/>
+            <result property="excluUseAr" column="exclu_use_ar"/>
+            <result property="floor" column="floor"/>
+        </association>
+    </resultMap>
+
+    <!-- Result Map - Apartment + All Deals (상세용) -->
+    <resultMap id="ApartmentWithAllDealsMap" type="com.jipjung.project.domain.Apartment">
+        <id property="aptSeq" column="apt_seq"/>
+        <result property="aptNm" column="apt_nm"/>
+        <result property="umdNm" column="umd_nm"/>
+        <result property="jibun" column="jibun"/>
+        <result property="roadNm" column="road_nm"/>
+        <result property="roadNmBonbun" column="road_nm_bonbun"/>
+        <result property="roadNmBubun" column="road_nm_bubun"/>
+        <result property="buildYear" column="build_year"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="createdAt" column="apt_created_at"/>
+        <result property="updatedAt" column="apt_updated_at"/>
+        <collection property="deals" ofType="com.jipjung.project.domain.ApartmentDeal">
+            <id property="dealNo" column="deal_no"/>
+            <result property="aptDong" column="apt_dong"/>
+            <result property="floor" column="floor"/>
+            <result property="dealDate" column="deal_date"/>
+            <result property="dealAmountNum" column="deal_amount_num"/>
+            <result property="excluUseAr" column="exclu_use_ar"/>
+            <result property="dealYear" column="deal_year"/>
+            <result property="dealMonth" column="deal_month"/>
+            <result property="dealDay" column="deal_day"/>
+            <result property="dealAmount" column="deal_amount"/>
+        </collection>
     </resultMap>
 
     <!-- 동적 검색 조건 -->
     <sql id="searchConditions">
         <where>
-            <if test="request.legalDong != null and request.legalDong != ''">
-                AND legal_dong LIKE CONCAT('%', #{request.legalDong}, '%')
+            <if test="request.aptNm != null and request.aptNm != ''">
+                AND a.apt_nm LIKE CONCAT('%', #{request.aptNm}, '%')
             </if>
-            <if test="request.apartmentName != null and request.apartmentName != ''">
-                AND apartment_name LIKE CONCAT('%', #{request.apartmentName}, '%')
+            <if test="request.umdNm != null and request.umdNm != ''">
+                AND a.umd_nm LIKE CONCAT('%', #{request.umdNm}, '%')
             </if>
             <if test="request.dealDateFrom != null and request.dealDateFrom != ''">
-                AND deal_date &gt;= #{request.dealDateFrom}
+                AND d.deal_date &gt;= #{request.dealDateFrom}
             </if>
             <if test="request.dealDateTo != null and request.dealDateTo != ''">
-                AND deal_date &lt;= #{request.dealDateTo}
+                AND d.deal_date &lt;= #{request.dealDateTo}
             </if>
             <if test="request.minDealAmount != null">
-                AND deal_amount &gt;= #{request.minDealAmount}
+                AND d.deal_amount_num &gt;= #{request.minDealAmount}
             </if>
             <if test="request.maxDealAmount != null">
-                AND deal_amount &lt;= #{request.maxDealAmount}
+                AND d.deal_amount_num &lt;= #{request.maxDealAmount}
             </if>
         </where>
     </sql>
 
-    <!-- 아파트 실거래가 목록 조회 (검색 및 페이징) -->
-    <select id="findAll" resultMap="ApartmentTransactionResultMap">
-        SELECT id, apartment_name, legal_dong, road_address, build_year,
-               deal_amount, deal_date, exclusive_area, floor, created_at
-        FROM apartment_transaction
+    <!-- 아파트 목록 조회 (최신 실거래 1건씩 포함) -->
+    <select id="findAllWithLatestDeal" resultMap="ApartmentWithLatestDealMap">
+        SELECT
+            a.apt_seq,
+            a.apt_nm,
+            a.umd_nm,
+            a.road_nm,
+            a.build_year,
+            a.latitude,
+            a.longitude,
+            a.created_at as apt_created_at,
+            a.updated_at as apt_updated_at,
+            d.deal_no,
+            d.deal_date,
+            d.deal_amount_num,
+            d.exclu_use_ar,
+            d.floor
+        FROM apartment a
+        LEFT JOIN (
+            SELECT
+                apt_seq,
+                deal_no,
+                deal_date,
+                deal_amount_num,
+                exclu_use_ar,
+                floor,
+                ROW_NUMBER() OVER (PARTITION BY apt_seq ORDER BY deal_date DESC, deal_no DESC) as rn
+            FROM apartment_deal
+        ) d ON a.apt_seq = d.apt_seq AND d.rn = 1
         <include refid="searchConditions"/>
-        ORDER BY deal_date DESC, id DESC
+        ORDER BY d.deal_date DESC, a.apt_nm
         LIMIT #{request.size} OFFSET #{request.page}
     </select>
 
-    <!-- 아파트 실거래가 상세 조회 -->
-    <select id="findById" resultMap="ApartmentTransactionResultMap">
-        SELECT id, apartment_name, legal_dong, road_address, build_year,
-               deal_amount, deal_date, exclusive_area, floor, created_at
-        FROM apartment_transaction
-        WHERE id = #{id}
+    <!-- 아파트 상세 조회 (모든 실거래 이력 포함) -->
+    <select id="findByAptSeqWithDeals" resultMap="ApartmentWithAllDealsMap">
+        SELECT
+            a.apt_seq,
+            a.apt_nm,
+            a.umd_nm,
+            a.jibun,
+            a.road_nm,
+            a.road_nm_bonbun,
+            a.road_nm_bubun,
+            a.build_year,
+            a.latitude,
+            a.longitude,
+            a.created_at as apt_created_at,
+            a.updated_at as apt_updated_at,
+            d.deal_no,
+            d.apt_dong,
+            d.floor,
+            d.deal_date,
+            d.deal_amount_num,
+            d.exclu_use_ar,
+            d.deal_year,
+            d.deal_month,
+            d.deal_day,
+            d.deal_amount
+        FROM apartment a
+        LEFT JOIN apartment_deal d ON a.apt_seq = d.apt_seq
+        WHERE a.apt_seq = #{aptSeq}
+        ORDER BY d.deal_date DESC, d.deal_no DESC
+    </select>
+
+    <!-- 아파트 기본정보만 조회 -->
+    <select id="findByAptSeq" resultMap="ApartmentResultMap">
+        SELECT
+            apt_seq,
+            dong_code,
+            sgg_cd,
+            umd_cd,
+            umd_nm,
+            jibun,
+            road_nm_sgg_cd,
+            road_nm,
+            road_nm_bonbun,
+            road_nm_bubun,
+            apt_nm,
+            build_year,
+            latitude,
+            longitude,
+            created_at as apt_created_at,
+            updated_at as apt_updated_at
+        FROM apartment
+        WHERE apt_seq = #{aptSeq}
+    </select>
+
+    <!-- apt_seq 존재 여부 확인 -->
+    <select id="existsByAptSeq" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM apartment
+        WHERE apt_seq = #{aptSeq}
     </select>
 
     <!-- 전체 개수 조회 (페이징용) -->
     <select id="count" resultType="int">
-        SELECT COUNT(*)
-        FROM apartment_transaction
+        SELECT COUNT(DISTINCT a.apt_seq)
+        FROM apartment a
+        LEFT JOIN apartment_deal d ON a.apt_seq = d.apt_seq
         <include refid="searchConditions"/>
     </select>
 

@@ -1,19 +1,52 @@
 package com.jipjung.project.repository;
 
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
-import com.jipjung.project.domain.ApartmentTransaction;
+import com.jipjung.project.domain.Apartment;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 아파트 및 실거래 정보 Mapper
+ * schema.sql의 apartment, apartment_deal 테이블 접근
+ */
 @Mapper
 public interface ApartmentMapper {
 
-    List<ApartmentTransaction> findAll(@Param("request") ApartmentSearchRequest request);
+    /**
+     * 아파트 목록 조회 (최신 실거래 1건씩 포함)
+     * @param request 검색 조건 및 페이징 정보
+     * @return 아파트 + 최신 거래 리스트
+     */
+    List<Apartment> findAllWithLatestDeal(@Param("request") ApartmentSearchRequest request);
 
-    Optional<ApartmentTransaction> findById(@Param("id") Long id);
+    /**
+     * 아파트 상세 조회 (모든 실거래 이력 포함)
+     * @param aptSeq 아파트코드
+     * @return 아파트 + 모든 거래 이력
+     */
+    Optional<Apartment> findByAptSeqWithDeals(@Param("aptSeq") String aptSeq);
 
+    /**
+     * 아파트 기본정보만 조회
+     * @param aptSeq 아파트코드
+     * @return 아파트 기본정보
+     */
+    Optional<Apartment> findByAptSeq(@Param("aptSeq") String aptSeq);
+
+    /**
+     * 아파트 존재 여부 확인
+     * @param aptSeq 아파트코드
+     * @return 존재 여부
+     */
+    boolean existsByAptSeq(@Param("aptSeq") String aptSeq);
+
+    /**
+     * 검색 조건에 맞는 아파트 개수 조회 (페이징용)
+     * @param request 검색 조건
+     * @return 아파트 개수
+     */
     int count(@Param("request") ApartmentSearchRequest request);
 }
