@@ -21,9 +21,12 @@ public enum ErrorCode {
 
     // 404 Not Found
     USER_NOT_FOUND(404, "사용자를 찾을 수 없습니다"),
+    APARTMENT_NOT_FOUND(404, "아파트를 찾을 수 없습니다"),
+    FAVORITE_NOT_FOUND(404, "관심 아파트를 찾을 수 없습니다"),
 
     // 409 Conflict
     DUPLICATE_EMAIL(409, "이미 존재하는 이메일입니다"),
+    DUPLICATE_FAVORITE(409, "이미 관심 아파트로 등록되어 있습니다"),
 
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다");

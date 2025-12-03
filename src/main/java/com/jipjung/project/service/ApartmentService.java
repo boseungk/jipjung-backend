@@ -1,10 +1,14 @@
 package com.jipjung.project.service;
 
+import com.jipjung.project.config.exception.DuplicateResourceException;
+import com.jipjung.project.config.exception.ErrorCode;
+import com.jipjung.project.config.exception.ResourceNotFoundException;
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
 import com.jipjung.project.controller.dto.request.FavoriteRequest;
-import com.jipjung.project.controller.response.ApartmentResponse;
+import com.jipjung.project.controller.response.ApartmentDetailResponse;
+import com.jipjung.project.controller.response.ApartmentListResponse;
 import com.jipjung.project.controller.response.FavoriteResponse;
-import com.jipjung.project.domain.ApartmentTransaction;
+import com.jipjung.project.domain.Apartment;
 import com.jipjung.project.domain.FavoriteApartment;
 import com.jipjung.project.repository.ApartmentMapper;
 import com.jipjung.project.repository.FavoriteApartmentMapper;
@@ -15,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,50 +28,31 @@ public class ApartmentService {
     private final FavoriteApartmentMapper favoriteApartmentMapper;
 
     /**
-     * 아파트 실거래가 목록 조회 (검색 및 페이징)
+     * 아파트 목록 조회 (검색 및 페이징)
+     * 각 아파트의 최신 실거래 1건 포함
      */
     public Map<String, Object> searchApartments(ApartmentSearchRequest request) {
-        // 페이지 번호와 크기 (record의 compact constructor에서 기본값 처리됨)
-        int page = request.page();
-        int size = request.size();
-        int offset = page * size;
+        ApartmentSearchRequest offsetRequest = createOffsetRequest(request);
 
-        // offset을 page 필드로 사용하는 새 request 생성 (MyBatis LIMIT OFFSET용)
-        ApartmentSearchRequest offsetRequest = new ApartmentSearchRequest(
-                request.legalDong(),
-                request.apartmentName(),
-                request.dealDateFrom(),
-                request.dealDateTo(),
-                request.minDealAmount(),
-                request.maxDealAmount(),
-                offset,  // OFFSET 값
-                size
-        );
-
-        List<ApartmentTransaction> apartments = apartmentMapper.findAll(offsetRequest);
+        List<Apartment> apartments = apartmentMapper.findAllWithLatestDeal(offsetRequest);
         int totalCount = apartmentMapper.count(request);
 
-        List<ApartmentResponse> responses = apartments.stream()
-                .map(ApartmentResponse::from)
-                .collect(Collectors.toList());
+        List<ApartmentListResponse> responses = apartments.stream()
+                .map(apt -> ApartmentListResponse.from(apt, apt.getLatestDeal()))
+                .toList();
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("apartments", responses);
-        result.put("totalCount", totalCount);
-        result.put("page", page);
-        result.put("size", size);
-        result.put("totalPages", (int) Math.ceil((double) totalCount / size));
-
-        return result;
+        return createPageResponse(responses, totalCount, request.page(), request.size());
     }
 
     /**
-     * 아파트 실거래가 상세 조회
+     * 아파트 상세 조회
+     * 해당 아파트의 모든 실거래 이력 포함
      */
-    public ApartmentResponse getApartmentById(Long id) {
-        ApartmentTransaction apartment = apartmentMapper.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("아파트 실거래가 정보를 찾을 수 없습니다: " + id));
-        return ApartmentResponse.from(apartment);
+    public ApartmentDetailResponse getApartmentDetail(String aptSeq) {
+        Apartment apartment = apartmentMapper.findByAptSeqWithDeals(aptSeq)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.APARTMENT_NOT_FOUND));
+
+        return ApartmentDetailResponse.from(apartment, apartment.getDeals());
     }
 
     /**
@@ -76,25 +60,18 @@ public class ApartmentService {
      */
     @Transactional
     public FavoriteResponse addFavorite(Long userId, FavoriteRequest request) {
-        // 아파트 존재 여부 확인
-        apartmentMapper.findById(request.apartmentTransactionId())
-                .orElseThrow(() -> new IllegalArgumentException("아파트 실거래가 정보를 찾을 수 없습니다: " + request.apartmentTransactionId()));
-
-        // 중복 체크
-        if (favoriteApartmentMapper.existsByUserIdAndApartmentId(userId, request.apartmentTransactionId())) {
-            throw new IllegalArgumentException("이미 관심 아파트로 등록되어 있습니다");
-        }
+        validateApartmentExists(request.aptSeq());
+        validateFavoriteNotDuplicate(userId, request.aptSeq());
 
         FavoriteApartment favorite = FavoriteApartment.builder()
                 .userId(userId)
-                .apartmentTransactionId(request.apartmentTransactionId())
+                .aptSeq(request.aptSeq())
                 .build();
 
         favoriteApartmentMapper.insert(favorite);
 
-        // 등록된 관심 아파트 조회 (아파트 정보 포함)
         FavoriteApartment savedFavorite = favoriteApartmentMapper.findById(favorite.getId())
-                .orElseThrow(() -> new IllegalArgumentException("관심 아파트 등록에 실패했습니다"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FAVORITE_NOT_FOUND));
 
         return FavoriteResponse.from(savedFavorite);
     }
@@ -103,10 +80,9 @@ public class ApartmentService {
      * 내 관심 아파트 목록 조회
      */
     public List<FavoriteResponse> getMyFavorites(Long userId) {
-        List<FavoriteApartment> favorites = favoriteApartmentMapper.findByUserId(userId);
-        return favorites.stream()
+        return favoriteApartmentMapper.findByUserId(userId).stream()
                 .map(FavoriteResponse::from)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
@@ -115,13 +91,68 @@ public class ApartmentService {
     @Transactional
     public void deleteFavorite(Long userId, Long favoriteId) {
         FavoriteApartment favorite = favoriteApartmentMapper.findById(favoriteId)
-                .orElseThrow(() -> new IllegalArgumentException("관심 아파트를 찾을 수 없습니다: " + favoriteId));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FAVORITE_NOT_FOUND));
 
-        // 본인 확인
+        validateFavoriteOwnership(favorite, userId);
+
+        favoriteApartmentMapper.deleteById(favoriteId);
+    }
+
+    /**
+     * offset 요청 객체 생성
+     */
+    private ApartmentSearchRequest createOffsetRequest(ApartmentSearchRequest request) {
+        int offset = request.page() * request.size();
+        return new ApartmentSearchRequest(
+                request.aptNm(),
+                request.umdNm(),
+                request.dealDateFrom(),
+                request.dealDateTo(),
+                request.minDealAmount(),
+                request.maxDealAmount(),
+                offset,
+                request.size()
+        );
+    }
+
+    /**
+     * 페이징 응답 생성
+     */
+    private Map<String, Object> createPageResponse(List<ApartmentListResponse> data,
+                                                    int totalCount, int page, int size) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("apartments", data);
+        response.put("totalCount", totalCount);
+        response.put("page", page);
+        response.put("size", size);
+        response.put("totalPages", (int) Math.ceil((double) totalCount / size));
+        return response;
+    }
+
+    /**
+     * 아파트 존재 여부 검증
+     */
+    private void validateApartmentExists(String aptSeq) {
+        if (!apartmentMapper.existsByAptSeq(aptSeq)) {
+            throw new ResourceNotFoundException(ErrorCode.APARTMENT_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 관심 아파트 중복 검증
+     */
+    private void validateFavoriteNotDuplicate(Long userId, String aptSeq) {
+        if (favoriteApartmentMapper.existsByUserIdAndAptSeq(userId, aptSeq)) {
+            throw new DuplicateResourceException(ErrorCode.DUPLICATE_FAVORITE);
+        }
+    }
+
+    /**
+     * 관심 아파트 소유권 검증
+     */
+    private void validateFavoriteOwnership(FavoriteApartment favorite, Long userId) {
         if (!favorite.getUserId().equals(userId)) {
             throw new IllegalArgumentException("본인의 관심 아파트만 삭제할 수 있습니다");
         }
-
-        favoriteApartmentMapper.deleteById(favoriteId);
     }
 }

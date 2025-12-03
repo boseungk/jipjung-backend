@@ -1,12 +1,13 @@
 package com.jipjung.project.controller.dto.request;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
-@Schema(description = "관심 아파트 등록 요청")
+/**
+ * 관심 아파트 등록 요청 DTO
+ * schema.sql의 favorite_apartment 테이블 기준
+ */
 public record FavoriteRequest(
-        @Schema(description = "아파트 실거래가 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotNull(message = "아파트 실거래가 ID는 필수입니다")
-        Long apartmentTransactionId
+        @NotBlank(message = "아파트 코드는 필수입니다")
+        String aptSeq  // 아파트 코드 (apartment.apt_seq)
 ) {
 }
