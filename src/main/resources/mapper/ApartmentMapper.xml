@@ -91,32 +91,28 @@
 
     <!-- 아파트 검색 조건 (apartment 테이블) -->
     <sql id="apartmentConditions">
-        <where>
-            <if test="request.aptNm != null and request.aptNm != ''">
-                AND a.apt_nm LIKE CONCAT('%', #{request.aptNm}, '%')
-            </if>
-            <if test="request.umdNm != null and request.umdNm != ''">
-                AND a.umd_nm LIKE CONCAT('%', #{request.umdNm}, '%')
-            </if>
-        </where>
+        <if test="request.aptNm != null and request.aptNm != ''">
+            AND a.apt_nm LIKE CONCAT('%', #{request.aptNm}, '%')
+        </if>
+        <if test="request.umdNm != null and request.umdNm != ''">
+            AND a.umd_nm LIKE CONCAT('%', #{request.umdNm}, '%')
+        </if>
     </sql>
 
     <!-- 거래 검색 조건 (apartment_deal 테이블) -->
     <sql id="dealConditions">
-        <where>
-            <if test="request.dealDateFrom != null and request.dealDateFrom != ''">
-                AND deal_date &gt;= #{request.dealDateFrom}
-            </if>
-            <if test="request.dealDateTo != null and request.dealDateTo != ''">
-                AND deal_date &lt;= #{request.dealDateTo}
-            </if>
-            <if test="request.minDealAmount != null">
-                AND deal_amount_num &gt;= #{request.minDealAmount}
-            </if>
-            <if test="request.maxDealAmount != null">
-                AND deal_amount_num &lt;= #{request.maxDealAmount}
-            </if>
-        </where>
+        <if test="request.dealDateFrom != null and request.dealDateFrom != ''">
+            AND deal_date &gt;= #{request.dealDateFrom}
+        </if>
+        <if test="request.dealDateTo != null and request.dealDateTo != ''">
+            AND deal_date &lt;= #{request.dealDateTo}
+        </if>
+        <if test="request.minDealAmount != null">
+            AND deal_amount_num &gt;= #{request.minDealAmount}
+        </if>
+        <if test="request.maxDealAmount != null">
+            AND deal_amount_num &lt;= #{request.maxDealAmount}
+        </if>
     </sql>
 
     <!-- 아파트 목록 조회 (최신 실거래 1건씩 포함) -->
@@ -157,7 +153,9 @@
         ) d ON TRUE -- LATERAL은 조건이 안쪽에 있으므로 ON TRUE로 연결
 
         -- 아파트 검색 조건 (이름, 동 등)
-        <include refid="apartmentConditions"/>
+        <where>
+            <include refid="apartmentConditions"/>
+        </where>
 
         -- 정렬 (MySQL 호환: NULLS LAST 대신 IS NULL ASC 사용)
         ORDER BY
