@@ -78,7 +78,7 @@ public class ApartmentController {
             description = "아파트를 관심 목록에 추가합니다.\n\n" +
                     "**인증 필요**: JWT 토큰 필요 (Authorization 헤더에 Bearer 토큰)\n\n" +
                     "**아파트 단위 저장**: apt_seq 기준으로 아파트 자체를 즐겨찾기",
-            security = @SecurityRequirement(name = "Bearer Authentication")
+            security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -108,7 +108,7 @@ public class ApartmentController {
             summary = "내 관심 아파트 목록 조회",
             description = "현재 로그인한 사용자의 관심 아파트 목록을 조회합니다.\n\n" +
                     "**인증 필요**: JWT 토큰 필요",
-            security = @SecurityRequirement(name = "Bearer Authentication")
+            security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -134,7 +134,7 @@ public class ApartmentController {
             description = "관심 아파트 목록에서 삭제합니다.\n\n" +
                     "**인증 필요**: JWT 토큰 필요\n\n" +
                     "**권한**: 본인의 관심 아파트만 삭제 가능",
-            security = @SecurityRequirement(name = "Bearer Authentication")
+            security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
