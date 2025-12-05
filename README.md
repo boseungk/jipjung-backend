@@ -217,6 +217,7 @@ spring.datasource.password=your_password
 ```
 Authorization: Bearer eyJhbGciOiJIUzUxMiJ9...
 ```
+> Swagger UI에서 Authorize 버튼을 눌러 토큰을 입력할 때는 `Bearer `를 제외한 순수 토큰만 입력하세요. UI가 `Bearer ` 접두사를 자동으로 붙입니다.
 
 #### 🏢 아파트 API (`/api/apartments`)
 

@@ -149,7 +149,7 @@ Content-Type: application/json
 
 ## 온보딩 & 프로필 API (2개)
 
-## 2-1. POST /api/auth/onboarding
+## 2-1. POST /api/users/onboarding
 **온보딩 정보 저장**
 
 사용 화면: `OnboardingView.vue`
@@ -776,7 +776,7 @@ Authorization: Bearer {accessToken}
 
 # 6. 드림홈 API (2개)
 
-## 6-1. PUT /api/dream-home
+## 6-1. POST /api/dream-home
 
 **드림홈 설정 및 변경**
 
@@ -918,7 +918,6 @@ Authorization: Bearer {accessToken}`
 **컬렉션 상세 조회 (상단 메인 뷰)**
 
 - **목적:** 하단 썸네일을 클릭했을 때, 상단에 **큰 이미지**와 **캐릭터(레제)**를 배치하기 위한 상세 정보입니다.
-- **시각화:** 이미지 3번처럼 **집 안에 캐릭터가 서 있는 연출**을 위해 캐릭터 좌표나 상태 정보가 필요할 수 있습니다.
 
 **요청**
 `GET /api/collections/101`
@@ -934,15 +933,6 @@ Authorization: Bearer {accessToken}`
     "houseName": "서울 강남 오피스텔",
     "description": "첫 번째로 완공한 나만의 오피스텔입니다.",
     "fullImageUrl": "https://cdn.../full_gangnam_offi.png", // 고화질 배경
-    
-    // [중요] 화면 속 레제(캐릭터) 연출 정보
-    "character": {
-      "isVisible": true,
-      "outfit": "MAID_OUTFIT", // 컬렉션별로 다른 옷을 입을 수도 있음
-      "action": "CLEANING",    // IDLE, CLEANING, WELCOMING 등 동작
-      "position": { "x": 50, "y": 60 }, // 화면 내 배치 좌표 (퍼센트)
-      "script": "주인님, 이 집은 정말 채광이 좋네요!" // 클릭 시 대사
-    },
 
     // 획득한 뱃지나 성과 (선택 사항)
     "stats": {
