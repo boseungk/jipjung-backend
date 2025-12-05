@@ -25,8 +25,15 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- 2. Drop Tables (in reverse dependency order)
 -- ============================================================================
 
+DROP TABLE IF EXISTS savings_history;
+DROP TABLE IF EXISTS user_collection;
+DROP TABLE IF EXISTS streak_history;
+DROP TABLE IF EXISTS theme_asset;
+DROP TABLE IF EXISTS dream_home;
 DROP TABLE IF EXISTS favorite_apartment;
 DROP TABLE IF EXISTS apartment_deal;
+DROP TABLE IF EXISTS house_theme;
+DROP TABLE IF EXISTS growth_level;
 DROP TABLE IF EXISTS apartment;
 DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS dongcode;
@@ -150,6 +157,143 @@ CREATE TABLE favorite_apartment (
     UNIQUE KEY uk_user_apt (user_id, apt_seq)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='관심 아파트 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.6 growth_level - 성장 레벨 규칙 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE growth_level (
+    level INT PRIMARY KEY COMMENT '레벨',
+    step_name VARCHAR(50) NOT NULL COMMENT '단계명 (터파기, 골조...)',
+    description VARCHAR(255) COMMENT '단계 설명',
+    required_exp INT NOT NULL COMMENT '다음 레벨업 필요 경험치',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='성장 레벨 규칙 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.7 house_theme - 하우스 테마 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE house_theme (
+    theme_id INT AUTO_INCREMENT PRIMARY KEY,
+    theme_code VARCHAR(20) UNIQUE NOT NULL COMMENT 'MODERN, HANOK, CASTLE...',
+    theme_name VARCHAR(50) NOT NULL COMMENT '테마 이름',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '현재 선택 가능 여부',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='하우스 테마 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.8 theme_asset - 테마별 레벨 이미지 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE theme_asset (
+    asset_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    theme_id INT NOT NULL,
+    level INT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY (theme_id) REFERENCES house_theme(theme_id) ON DELETE CASCADE,
+    FOREIGN KEY (level) REFERENCES growth_level(level) ON DELETE CASCADE,
+    UNIQUE KEY uk_theme_level (theme_id, level)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='테마별 레벨 이미지 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.9 user 테이블 컬럼 추가 (게임/금융)
+-- ----------------------------------------------------------------------------
+ALTER TABLE `user` ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE;
+ALTER TABLE `user` ADD COLUMN birth_year INT;
+ALTER TABLE `user` ADD COLUMN annual_income BIGINT DEFAULT 0;
+ALTER TABLE `user` ADD COLUMN existing_loan_monthly BIGINT DEFAULT 0;
+ALTER TABLE `user` ADD COLUMN current_level INT DEFAULT 1;
+ALTER TABLE `user` ADD COLUMN current_exp INT DEFAULT 0;
+ALTER TABLE `user` ADD COLUMN streak_count INT DEFAULT 0;
+ALTER TABLE `user` ADD COLUMN last_streak_date DATE;
+ALTER TABLE `user` ADD COLUMN max_streak INT DEFAULT 0;
+ALTER TABLE `user` ADD COLUMN selected_theme_id INT;
+ALTER TABLE `user` ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+
+-- ----------------------------------------------------------------------------
+-- 3.10 dream_home - 드림홈(목표) 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE dream_home (
+    dream_home_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    apt_seq VARCHAR(20) NOT NULL,
+    target_amount BIGINT NOT NULL COMMENT '목표 금액',
+    target_date DATE NOT NULL COMMENT '목표 달성일',
+    monthly_goal BIGINT COMMENT '월 목표 저축액',
+    current_saved_amount BIGINT DEFAULT 0 COMMENT '현재까지 모은 금액',
+    start_date DATE DEFAULT (CURRENT_DATE) COMMENT '목표 시작일',
+    status VARCHAR(20) DEFAULT 'ACTIVE' COMMENT 'ACTIVE, COMPLETED, GIVEN_UP',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (apt_seq) REFERENCES apartment(apt_seq) ON DELETE CASCADE,
+    INDEX idx_dream_user_status (user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='드림홈(목표) 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.11 savings_history - 저축 내역 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE savings_history (
+    savings_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dream_home_id BIGINT NOT NULL,
+    amount BIGINT NOT NULL COMMENT '저축/인출 금액',
+    save_type VARCHAR(20) NOT NULL COMMENT 'DEPOSIT 또는 WITHDRAW',
+    memo VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY (dream_home_id) REFERENCES dream_home(dream_home_id) ON DELETE CASCADE,
+    INDEX idx_save_home_date (dream_home_id, is_deleted, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='저축 내역 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.12 streak_history - 스트릭 기록 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE streak_history (
+    streak_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    streak_date DATE NOT NULL COMMENT '참여 날짜',
+    exp_earned INT DEFAULT 0 COMMENT '획득 경험치',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_date (user_id, streak_date),
+    INDEX idx_streak_user_date (user_id, streak_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='스트릭 기록 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.13 user_collection - 완성한 집 컬렉션
+-- ----------------------------------------------------------------------------
+CREATE TABLE user_collection (
+    collection_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    theme_id INT NOT NULL,
+    house_name VARCHAR(100) COMMENT '유저가 붙인 집 이름',
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '완공 날짜',
+    is_main_display BOOLEAN DEFAULT FALSE COMMENT '대표 전시 여부',
+    total_saved BIGINT COMMENT '완공까지 모은 총액',
+    duration_days INT COMMENT '완공까지 걸린 일수',
+
+    FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (theme_id) REFERENCES house_theme(theme_id) ON DELETE CASCADE,
+    INDEX idx_collection_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='완성한 집 컬렉션';
 
 -- ============================================================================
 -- 4. Restore Settings

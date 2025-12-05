@@ -2,8 +2,9 @@
 -- JipJung Data Migration for H2
 -- ============================================================================
 -- Description: H2용 샘플 데이터
--- Version: 1.0
+-- Version: 2.0 (Dashboard 데이터 추가)
 -- Created: 2025-12-03
+-- Updated: 2025-12-05
 -- ============================================================================
 
 -- ============================================================================
@@ -144,6 +145,58 @@ INSERT INTO apartment_deal (apt_seq, apt_dong, floor, deal_year, deal_month, dea
 ('27260-1423', ' ', '14', 2020, 8, 26, 84.79, '64,900'),
 ('11545-23', ' ', '17', 2017, 12, 9, 59.82, '33,000'),
 ('27230-174', ' ', '2', 2011, 12, 28, 59.84, '11,800');
+
+-- ============================================================================
+-- 4. growth_level 데이터 (집짓기 7단계)
+-- ============================================================================
+
+INSERT INTO growth_level (level, step_name, description, required_exp, is_deleted) VALUES
+(1, '터파기', '기초 공사를 시작합니다', 100, false),
+(2, '기초 공사', '튼튼한 기초를 다집니다', 200, false),
+(3, '골조', '집의 뼈대를 세웁니다', 300, false),
+(4, '지붕', '비바람을 막을 지붕을 올립니다', 400, false),
+(5, '외벽', '외벽 마감 작업을 합니다', 500, false),
+(6, '내부', '내부 마감 작업을 합니다', 600, false),
+(7, '완공', '드디어 집이 완성되었습니다!', 0, false);
+
+-- ============================================================================
+-- 5. house_theme 데이터 (테마 3종)
+-- ============================================================================
+
+INSERT INTO house_theme (theme_id, theme_code, theme_name, is_active, is_deleted) VALUES
+(1, 'MODERN', '모던 하우스', true, false),
+(2, 'HANOK', '한옥', true, false),
+(3, 'CASTLE', '캐슬', true, false);
+
+-- ============================================================================
+-- 6. theme_asset 데이터 (테마별 레벨 이미지)
+-- ============================================================================
+
+INSERT INTO theme_asset (theme_id, level, image_url, is_deleted) VALUES
+-- MODERN 테마
+(1, 1, '/assets/house/modern/level1.png', false),
+(1, 2, '/assets/house/modern/level2.png', false),
+(1, 3, '/assets/house/modern/level3.png', false),
+(1, 4, '/assets/house/modern/level4.png', false),
+(1, 5, '/assets/house/modern/level5.png', false),
+(1, 6, '/assets/house/modern/level6.png', false),
+(1, 7, '/assets/house/modern/level7.png', false),
+-- HANOK 테마
+(2, 1, '/assets/house/hanok/level1.png', false),
+(2, 2, '/assets/house/hanok/level2.png', false),
+(2, 3, '/assets/house/hanok/level3.png', false),
+(2, 4, '/assets/house/hanok/level4.png', false),
+(2, 5, '/assets/house/hanok/level5.png', false),
+(2, 6, '/assets/house/hanok/level6.png', false),
+(2, 7, '/assets/house/hanok/level7.png', false),
+-- CASTLE 테마
+(3, 1, '/assets/house/castle/level1.png', false),
+(3, 2, '/assets/house/castle/level2.png', false),
+(3, 3, '/assets/house/castle/level3.png', false),
+(3, 4, '/assets/house/castle/level4.png', false),
+(3, 5, '/assets/house/castle/level5.png', false),
+(3, 6, '/assets/house/castle/level6.png', false),
+(3, 7, '/assets/house/castle/level7.png', false);
 
 -- ============================================================================
 -- End of Data Migration
