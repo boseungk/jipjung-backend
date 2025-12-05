@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jipjung.project.repository.SavingsHistoryMapper">
+
+    <!-- Result Map -->
+    <resultMap id="SavingsHistoryResultMap" type="com.jipjung.project.domain.SavingsHistory">
+        <id property="savingsId" column="savings_id"/>
+        <result property="dreamHomeId" column="dream_home_id"/>
+        <result property="amount" column="amount"/>
+        <result property="saveType" column="save_type" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="memo" column="memo"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="isDeleted" column="is_deleted"/>
+    </resultMap>
+
+    <!-- 특정 날짜 이전까지의 순 저축 합계 -->
+    <select id="sumBeforeDate" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(
+            CASE WHEN save_type = 'DEPOSIT' THEN amount ELSE -amount END
+        ), 0)
+        FROM savings_history
+        WHERE dream_home_id = #{dreamHomeId}
+          AND is_deleted = false
+          AND created_at &lt; #{beforeDateTime}
+    </select>
+
+    <!-- 날짜 범위 내 저축 내역 조회 -->
+    <select id="findByDreamHomeIdAndDateRange" resultMap="SavingsHistoryResultMap">
+        SELECT *
+        FROM savings_history
+        WHERE dream_home_id = #{dreamHomeId}
+          AND is_deleted = false
+          AND created_at BETWEEN #{startDateTime} AND #{endDateTime}
+        ORDER BY created_at ASC
+    </select>
+
+</mapper>
