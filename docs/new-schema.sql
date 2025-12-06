@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS expense;
 DROP TABLE IF EXISTS savings_history;
 DROP TABLE IF EXISTS dream_home;
 DROP TABLE IF EXISTS favorite_apartment;
+DROP TABLE IF EXISTS user_preferred_area;
 DROP TABLE IF EXISTS apartment_deal;
 DROP TABLE IF EXISTS apartment;
 DROP TABLE IF EXISTS dongcode;
@@ -272,4 +273,15 @@ CREATE TABLE user_collection (
                                  FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
                                  FOREIGN KEY (theme_id) REFERENCES house_theme(theme_id) ON DELETE CASCADE,
                                  INDEX idx_collection_user_theme_date (user_id, theme_id, completed_at)
+);
+
+-- 14. [NEW] 선호 지역 테이블
+CREATE TABLE user_preferred_area (
+                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                     user_id BIGINT NOT NULL,
+                                     area_name VARCHAR(50) NOT NULL COMMENT '선호 지역명 (강남구, 서초구 등)',
+                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                                     FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
+                                     INDEX idx_user_area (user_id)
 );
