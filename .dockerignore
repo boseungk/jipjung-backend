@@ -1,0 +1,41 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+CLAUDE.md
+
+# Other
+.serena/
+*.sql
