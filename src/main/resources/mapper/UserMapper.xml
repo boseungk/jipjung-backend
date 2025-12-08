@@ -5,22 +5,52 @@
 
 <mapper namespace="com.jipjung.project.repository.UserMapper">
 
-    <!-- Result Map -->
+    <!-- Result Map (Full) -->
     <resultMap id="UserResultMap" type="com.jipjung.project.domain.User">
         <id property="id" column="user_id"/>
         <result property="email" column="email"/>
-        <result property="nickname" column="nickname"/>
         <result property="password" column="password"/>
+        <result property="name" column="name"/>
+        <result property="nickname" column="nickname"/>
+        <result property="phone" column="phone"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="socialProvider" column="social_provider"/>
+        <result property="socialId" column="social_id"/>
         <result property="role" column="role" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="isActive" column="is_active"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="onboardingCompleted" column="onboarding_completed"/>
+        <result property="birthYear" column="birth_year"/>
+        <result property="annualIncome" column="annual_income"/>
+        <result property="existingLoanMonthly" column="existing_loan_monthly"/>
+        <result property="currentAssets" column="current_assets"/>
+        <result property="dsrMode" column="dsr_mode"/>
+        <result property="lastDsrCalculationAt" column="last_dsr_calculation_at"/>
+        <result property="cachedMaxLoanAmount" column="cached_max_loan_amount"/>
+        <result property="currentLevel" column="current_level"/>
+        <result property="currentExp" column="current_exp"/>
+        <result property="streakCount" column="streak_count"/>
+        <result property="lastStreakDate" column="last_streak_date"/>
+        <result property="maxStreak" column="max_streak"/>
+        <result property="selectedThemeId" column="selected_theme_id"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <!-- ID로 활성 사용자 조회 -->
+    <select id="findById" resultMap="UserResultMap">
+        SELECT *
+        FROM `user`
+        WHERE user_id = #{userId}
+          AND is_deleted = false
+    </select>
+
     <!-- 이메일로 사용자 조회 -->
     <select id="findByEmail" resultMap="UserResultMap">
-        SELECT user_id, email, nickname, password, role, created_at, updated_at
+        SELECT *
         FROM `user`
         WHERE email = #{email}
+          AND is_deleted = false
     </select>
 
     <!-- 사용자 등록 -->
@@ -36,5 +66,29 @@
         FROM `user`
         WHERE email = #{email}
     </select>
+
+    <!-- 온보딩 정보 업데이트 (currentAssets 추가) -->
+    <update id="updateOnboarding">
+        UPDATE `user`
+        SET birth_year = #{birthYear},
+            annual_income = #{annualIncome},
+            existing_loan_monthly = #{existingLoanMonthly},
+            current_assets = #{currentAssets},
+            onboarding_completed = true,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND is_deleted = false
+    </update>
+
+    <!-- 프로필 정보 업데이트 -->
+    <update id="updateProfile">
+        UPDATE `user`
+        SET nickname = #{nickname},
+            annual_income = #{annualIncome},
+            existing_loan_monthly = #{existingLoanMonthly},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND is_deleted = false
+    </update>
 
 </mapper>

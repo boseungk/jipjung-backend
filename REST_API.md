@@ -6,19 +6,32 @@
 **API 버전**: v1.0
 **Base URL**: `http://localhost:8080/api`
 **인증 방식**: JWT Bearer Token
-**총 API 개수**: 24개 (구현 완료: 7개 | 개발 계획: 17개)
-**현재 구현 단계**: Phase 1 - MVP 기초 구현 (29% 완료)
+**총 API 개수**: 24개 (구현 완료: 11개 | 개발 계획: 13개)
+**현재 구현 단계**: Phase 2 - DSR 엔진 통합 완료 (46% 완료)
 
 ---
 
 ## API 요약
 
-### ✅ 구현 완료 (7개)
+### ✅ 구현 완료 (11개)
 
 | 카테고리 | 개수 | 엔드포인트 | 설명 |
 |---------|------|----------|------|
 | **인증** | 2 | POST /api/auth/signup, POST /api/auth/login | 회원가입, 로그인 |
 | **아파트** | 5 | GET /api/apartments, GET /api/apartments/{aptSeq}, POST /api/apartments/favorites, GET /api/apartments/favorites, DELETE /api/apartments/favorites/{id} | 아파트 조회 및 관심 관리 |
+| **사용자** | 3 | POST /api/users/onboarding, POST /api/users/profile, GET /api/users/dashboard | 온보딩, 프로필, 대시보드 |
+| **DSR** | 1 | POST /api/simulation/dsr | DSR PRO 시뮬레이션 |
+
+### 🔄 미구현 (13개)
+
+| 카테고리 | 개수 | 엔드포인트 | 설명 |
+|---------|------|----------|------|
+| **인증** | 3 | POST /api/auth/logout, POST /api/auth/refresh, DELETE /api/auth/withdraw | 로그아웃, 토큰갱신, 회원탈퇴 |
+| **AI 매니저** | 3 | POST /api/ai-manager/analyze, POST /api/ai-manager/judgment, GET /api/ai-manager/history | 지출분석, 판결, 내역조회 |
+| **드림홈** | 2 | POST /api/dream-home, POST /api/dream-home/savings | 드림홈 설정, 저축 기록 |
+| **컬렉션** | 2 | GET /api/collections, GET /api/collections/{id} | 컬렉션 목록, 상세 |
+| **아파트** | 1 | GET /api/apartments/region-avg | 지역 평균 시세 |
+| **스트릭** | 2 | POST /api/streak/participate, GET /api/streak/reward | 스트릭 참여, 보상 수령 |
 
 
 
@@ -147,9 +160,9 @@ Content-Type: application/json
 
 ---
 
-## 온보딩 & 프로필 API (2개)
+## 온보딩 & 프로필 API (2개) ✅
 
-## 2-1. POST /api/auth/onboarding
+## 2-1. POST /api/users/onboarding
 **온보딩 정보 저장**
 
 사용 화면: `OnboardingView.vue`
@@ -160,6 +173,7 @@ Content-Type: application/json
   "birthYear": 1995,
   "annualIncome": 50000000,
   "existingLoanMonthly": 500000,
+  "currentAssets": 30000000,
   "preferredAreas": ["강남구", "서초구", "송파구"]
 }
 ```
@@ -168,9 +182,10 @@ Content-Type: application/json
 | 필드 | 타입 | 필수 | 설명 | 예시 |
 |------|------|------|------|------|
 | birthYear | number | O | 출생년도 | 1995 |
-| annualIncome | number | O | 연소득 (만원 단위) | 50000000 |
-| existingLoanMonthly | number | O | 월 대출 상환액 (만원) | 500000 |
-| preferredAreas | array | O | 선호 지역 배열 | ["강남구", "서초구"] |
+| annualIncome | number | O | 연소득 (원 단위) | 50000000 |
+| existingLoanMonthly | number | O | 월 대출 상환액 (원 단위) | 500000 |
+| currentAssets | number | O | 현재 보유 자산 (원 단위) | 30000000 |
+| preferredAreas | array | O | 선호 지역 배열 (최대 10개, 각 50자 이내) | ["강남구", "서초구"] |
 
 ### 응답 (200)
 ```json
@@ -191,12 +206,6 @@ Content-Type: application/json
       "dsrRatio": 12.0,
       "grade": "SAFE", // SAFE, CAUTION, DANGER
       "maxLoanAmount": 400000000
-    },
-
-    // 3. 레제의 첫 반응 (대시보드 가기 전, 모달이나 화면 전환용)
-    "initialReaction": {
-      "mood": "HAPPY",
-      "script": "오~ 꽤 건실하네? 기초공사부터 튼튼히 시작해보자!"
     }
   }
 }
@@ -248,9 +257,89 @@ Content-Type: application/json
 
 ---
 
-# 🔄 향후 개발 예정 API (17개)
+# 3. DSR 시뮬레이션 API (1개) ✅
 
-## 3-1. GET /api/users/dashboard
+## 3-1. POST /api/simulation/dsr
+**DSR PRO 모드 시뮬레이션**
+
+2026년 정책 기반 상세 DSR 시뮬레이션을 수행합니다.
+
+**적용 정책:**
+- 스트레스 금리: 수도권 3.0%p, 비수도권 0.75%p
+- 청년 장래소득: 20-34세 구간별 인정
+- 대출 유형별 스트레스 반영율: 변동 100%, 혼합 70%, 주기형 40%, 고정 0%
+
+### 요청
+```json
+{
+  "annualIncome": 60000000,
+  "region": "SEOUL_METRO",
+  "existingAnnualDebtService": 3000000,
+  "jeonseLoanBalance": 200000000,
+  "jeonseLoanRate": 4.0,
+  "jeonseIncludedInDsr": true,
+  "targetLoanType": "PERIODIC",
+  "targetLoanRate": 4.0,
+  "maturityYears": 40,
+  "lenderType": "BANK"
+}
+```
+
+### 요청 필드
+| 필드 | 타입 | 필수 | 설명 | 예시 |
+|------|------|------|------|------|
+| annualIncome | number | O | 연소득 (원) | 60000000 |
+| region | string | O | 지역 (SEOUL_METRO/ETC) | SEOUL_METRO |
+| existingAnnualDebtService | number | O | 기존 연간 원리금 상환액 (원) | 3000000 |
+| jeonseLoanBalance | number | X | 전세대출 잔액 (원) | 200000000 |
+| jeonseLoanRate | number | X | 전세대출 금리 (%) | 4.0 |
+| jeonseIncludedInDsr | boolean | X | 전세대출 DSR 포함 여부 | true |
+| targetLoanType | string | O | 대출 유형 (VARIABLE/MIXED/PERIODIC/FIXED) | PERIODIC |
+| targetLoanRate | number | O | 예상 대출 금리 (%) | 4.0 |
+| maturityYears | number | O | 대출 만기 (년, 1~50) | 40 |
+| lenderType | string | X | 금융기관 유형 (BANK/NON_BANK, 기본: BANK) | BANK |
+
+### 응답 (200)
+```json
+{
+  "code": 200,
+  "status": "OK",
+  "message": "시뮬레이션 성공",
+  "data": {
+    "currentDsrPercent": 15.5,
+    "dsrAfterMaxLoanPercent": 39.8,
+    "userGrade": "SAFE",
+    "maxLoanAmount": 420000000,
+    "appliedPolicy": {
+      "stressDsrRate": 1.2,
+      "youthIncomeMultiplier": 1.131
+    },
+    "simulationTip": "고정금리를 선택하면 스트레스 금리 없이 더 많은 대출이 가능합니다.",
+    "gameUpdate": {
+      "reducedGap": 50000000,
+      "expGained": 500
+    }
+  }
+}
+```
+
+### 응답 필드
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| currentDsrPercent | number | 현재 DSR (%) |
+| dsrAfterMaxLoanPercent | number | 최대 대출 시 예상 DSR (%) |
+| userGrade | string | DSR 등급 (SAFE/WARNING/RESTRICTED) |
+| maxLoanAmount | number | 최대 대출 가능액 (원) |
+| appliedPolicy.stressDsrRate | number | 적용된 스트레스 가산금리 (%) |
+| appliedPolicy.youthIncomeMultiplier | number | 적용된 장래소득 인정 배율 |
+| simulationTip | string | 맞춤 시뮬레이션 팁 |
+| gameUpdate | object | 게임 갱신 정보 (목표 설정 시에만) |
+
+---
+
+# 4. 대시보드 API (1개) ✅
+
+## 4-1. GET /api/users/dashboard
 **대시보드 통합 데이터 조회**
 
 사용 화면: `DashboardView.vue`
@@ -313,37 +402,47 @@ Authorization: Bearer {accessToken}
     // [Section 4] 우측 중단: DSR (게이지 차트)
     "dsr": {
       "dsrPercent": 24.0,
-      "gradeLabel": "매우 안전", // UI 뱃지 텍스트
+      "gradeLabel": "안전",      // UI 뱃지 텍스트 (안전/주의/위험)
       "gradeColor": "GREEN",    // UI 색상 코드 (GREEN, YELLOW, RED)
       "financialInfo": {
         "monthlyIncome": 4160000,
         "existingLoanRepayment": 1000000, // 기존 상환
-        "availableCapacity": 1660000      // 여력 (추가 대출 가능 상환액)
+        "availableCapacity": 664000       // 여력 (월소득의 40% - 기존 대출)
       }
     },
 
     // [Section 5] 하단: 자산 성장 (라인 차트)
     "assets": {
       "totalAsset": 42500000,
-      "growthAmount": 37500000, // 지난달 대비 또는 시작일 대비 증가액
+      "growthAmount": 37500000, // 30일 기준 증가액
       "growthRate": 750.0,      // 증가율
-      // 차트용 데이터 배열 (최근 7일 or 30일)
+      // 차트용 데이터 배열 (최근 30일)
       "chartData": [
-        { "date": "10-01", "amount": 10000000 },
-        { "date": "10-02", "amount": 10050000 },
+        { "date": "2025-11-01", "balance": 10000000 },
+        { "date": "2025-11-02", "balance": 10050000 },
         // ... 중간 생략 ...
-        { "date": "10-13", "amount": 42500000 }
+        { "date": "2025-11-30", "balance": 42500000 }
       ]
     },
 
-    // [Section 6] 라이프스타일 쇼룸 (이미지 2번 관련)
-    // 현재 짓고 있는 집의 시각적 상태
+    // [Section 6] 라이프스타일 쇼룸 (집짓기 시각화)
     "showroom": {
       "currentStep": 2,
       "totalSteps": 7,
       "stepTitle": "기둥 올리기",
       "stepDescription": "튼튼한 골조가 올라가요.",
-      "imageUrl": "https://cdn.../house_step_02_isometric.png", // 현재 단계 이미지
+      "imageUrl": "https://cdn.../house_step_02_isometric.png"
+    },
+
+    // [Section 7] Gap 분석 (Phase 2)
+    "gapAnalysis": {
+      "hasTarget": true,          // 목표 설정 여부
+      "targetAmount": 500000000,  // 목표 금액 (미설정 시 지역 평균)
+      "currentAssets": 30000000,  // 현재 자산 (온보딩 입력값)
+      "currentSavedAmount": 50000000, // 현재 저축액
+      "virtualLoanLimit": 420000000, // 추정 대출 한도
+      "requiredSavings": 0,       // 필요 저축액 (목표 - 자산 - 저축 - 대출한도)
+      "dsrMode": "PRO"            // DSR 모드 (LITE/PRO)
     }
 
   }
@@ -776,7 +875,7 @@ Authorization: Bearer {accessToken}
 
 # 6. 드림홈 API (2개)
 
-## 6-1. PUT /api/dream-home
+## 6-1. POST /api/dream-home
 
 **드림홈 설정 및 변경**
 
@@ -918,7 +1017,6 @@ Authorization: Bearer {accessToken}`
 **컬렉션 상세 조회 (상단 메인 뷰)**
 
 - **목적:** 하단 썸네일을 클릭했을 때, 상단에 **큰 이미지**와 **캐릭터(레제)**를 배치하기 위한 상세 정보입니다.
-- **시각화:** 이미지 3번처럼 **집 안에 캐릭터가 서 있는 연출**을 위해 캐릭터 좌표나 상태 정보가 필요할 수 있습니다.
 
 **요청**
 `GET /api/collections/101`
@@ -934,15 +1032,6 @@ Authorization: Bearer {accessToken}`
     "houseName": "서울 강남 오피스텔",
     "description": "첫 번째로 완공한 나만의 오피스텔입니다.",
     "fullImageUrl": "https://cdn.../full_gangnam_offi.png", // 고화질 배경
-    
-    // [중요] 화면 속 레제(캐릭터) 연출 정보
-    "character": {
-      "isVisible": true,
-      "outfit": "MAID_OUTFIT", // 컬렉션별로 다른 옷을 입을 수도 있음
-      "action": "CLEANING",    // IDLE, CLEANING, WELCOMING 등 동작
-      "position": { "x": 50, "y": 60 }, // 화면 내 배치 좌표 (퍼센트)
-      "script": "주인님, 이 집은 정말 채광이 좋네요!" // 클릭 시 대사
-    },
 
     // 획득한 뱃지나 성과 (선택 사항)
     "stats": {
@@ -956,7 +1045,12 @@ Authorization: Bearer {accessToken}`
 ---
 
 ### 구현 완료
-1. **인증 API (2/5 완료)** - 회원가입, 로그인
-2. **아파트 API (5/6 완료)** - 목록 조회, 상세 조회, 관심 관리 (3개)
+1. **인증 API (2개)** - 회원가입, 로그인 ✅
+2. **아파트 API (5개)** - 목록 조회, 상세 조회, 관심 관리 (3개) ✅
+3. **사용자 API (3개)** - 온보딩, 프로필, 대시보드 ✅
+4. **DSR API (1개)** - DSR PRO 시뮬레이션 ✅
 
-
+### 🔄 향후 개발 예정
+- AI 매니저 API (3개)
+- 드림홈 API (2개)
+- 컬렉션 API (2개)

@@ -34,3 +34,6 @@ build/
 
 # Log files
 *.log
+
+# Configuration files with sensitive data
+src/main/resources/application-mysql.properties

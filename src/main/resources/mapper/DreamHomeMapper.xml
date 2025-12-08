@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jipjung.project.repository.DreamHomeMapper">
+
+    <!-- Result Map (with Apartment) -->
+    <resultMap id="DreamHomeResultMap" type="com.jipjung.project.domain.DreamHome">
+        <id property="dreamHomeId" column="dream_home_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="aptSeq" column="apt_seq"/>
+        <result property="targetAmount" column="target_amount"/>
+        <result property="targetDate" column="target_date"/>
+        <result property="monthlyGoal" column="monthly_goal"/>
+        <result property="currentSavedAmount" column="current_saved_amount"/>
+        <result property="startDate" column="start_date"/>
+        <result property="status" column="status" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <!-- 아파트 정보 조인 -->
+        <association property="apartment" javaType="com.jipjung.project.domain.Apartment">
+            <id property="aptSeq" column="apt_seq"/>
+            <result property="aptNm" column="apt_nm"/>
+            <result property="umdNm" column="umd_nm"/>
+            <result property="roadNm" column="road_nm"/>
+            <result property="buildYear" column="build_year"/>
+            <result property="latitude" column="latitude"/>
+            <result property="longitude" column="longitude"/>
+        </association>
+    </resultMap>
+
+    <!-- 사용자의 활성 드림홈 조회 (with 아파트) -->
+    <select id="findActiveByUserId" resultMap="DreamHomeResultMap">
+        SELECT dh.*, a.apt_nm, a.umd_nm, a.road_nm, a.build_year, a.latitude, a.longitude
+        FROM dream_home dh
+        LEFT JOIN apartment a ON dh.apt_seq = a.apt_seq
+        WHERE dh.user_id = #{userId}
+          AND dh.status = 'ACTIVE'
+          AND dh.is_deleted = false
+        LIMIT 1
+    </select>
+
+</mapper>

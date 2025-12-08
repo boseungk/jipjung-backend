@@ -117,6 +117,7 @@
 
     <!-- 아파트 목록 조회 (최신 실거래 1건씩 포함) -->
     <select id="findAllWithLatestDeal" resultMap="ApartmentWithLatestDealMap">
+        <bind name="offset" value="(request.page == null ? 0 : request.page) * (request.size == null ? 10 : request.size)"/>
         SELECT
         a.apt_seq,
         a.apt_nm,
@@ -134,23 +135,21 @@
         d.floor
         FROM apartment a
 
-        -- [핵심 변경] LEFT JOIN LATERAL 사용
-        LEFT JOIN LATERAL (
+        -- H2에서도 동작하도록 윈도우 함수로 최신 1건만 뽑아서 조인
+        LEFT JOIN (
         SELECT
-        deal_no,
-        deal_date,
-        deal_amount_num,
-        exclu_use_ar,
-        floor
+        ad.apt_seq,
+        ad.deal_no,
+        ad.deal_date,
+        ad.deal_amount_num,
+        ad.exclu_use_ar,
+        ad.floor,
+        ROW_NUMBER() OVER (PARTITION BY ad.apt_seq ORDER BY ad.deal_date DESC, ad.deal_no DESC) AS rn
         FROM apartment_deal ad
-        WHERE ad.apt_seq = a.apt_seq  -- 바깥쪽 테이블(a)의 키를 참조 (For Loop 처럼 동작)
-
-        <include refid="dealConditions"/>
-
-        -- 인덱스를 태워서 가장 최신 1건만 빠르게 조회
-        ORDER BY deal_date DESC, deal_no DESC
-        LIMIT 1
-        ) d ON TRUE -- LATERAL은 조건이 안쪽에 있으므로 ON TRUE로 연결
+        <where>
+            <include refid="dealConditions"/>
+        </where>
+        ) d ON d.apt_seq = a.apt_seq AND d.rn = 1
 
         -- 아파트 검색 조건 (이름, 동 등)
         <where>
@@ -162,7 +161,7 @@
         (d.deal_date IS NULL) ASC,
         d.deal_date DESC,
         a.apt_nm
-        LIMIT #{request.size} OFFSET #{request.offset}
+        LIMIT #{request.size} OFFSET #{offset}
     </select>
 
     <!-- 아파트 상세 조회 (모든 실거래 이력 포함) -->
