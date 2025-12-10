@@ -23,6 +23,10 @@ public record ApiResponse<T>(
         return successBody(null);
     }
 
+    public static <T> ApiResponse<T> successBody(String message, T data) {
+        return body(HttpStatus.OK, message, data);
+    }
+
     public static <T> ApiResponse<T> errorBody(HttpStatus status, String message) {
         return body(status, message, null);
     }

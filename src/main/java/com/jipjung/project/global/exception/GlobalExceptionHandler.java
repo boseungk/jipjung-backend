@@ -67,6 +67,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 비밀번호 불일치 예외 처리
+     */
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidPasswordException(InvalidPasswordException e) {
+        log.warn("Invalid password");
+        return ApiResponse.error(e.getErrorCode());
+    }
+
+    /**
+     * 비즈니스 예외 처리
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+        log.warn("Business exception: {}", e.getMessage());
+        return ApiResponse.error(e.getErrorCode());
+    }
+
+    /**
      * IllegalArgumentException 처리
      */
     @ExceptionHandler(IllegalArgumentException.class)
