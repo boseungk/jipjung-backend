@@ -7,11 +7,13 @@ import com.jipjung.project.controller.dto.response.ProfileUpdateResponse;
 import com.jipjung.project.domain.User;
 import com.jipjung.project.dsr.DsrResult;
 import com.jipjung.project.global.exception.ErrorCode;
+import com.jipjung.project.global.exception.InvalidPasswordException;
 import com.jipjung.project.global.exception.ResourceNotFoundException;
 import com.jipjung.project.repository.UserMapper;
 import com.jipjung.project.repository.UserPreferredAreaMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserPreferredAreaMapper userPreferredAreaMapper;
     private final DsrService dsrService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 온보딩 정보 저장
@@ -74,7 +77,7 @@ public class UserService {
         log.info("Onboarding completed. userId: {}, dsrRatio: {}%, grade: {}, currentAssets: {}, preferredAreas: {}",
                 userId, dsrResult.currentDsrPercent(), dsrResult.grade(), request.currentAssets(), sanitizedAreas.size());
 
-        return OnboardingResponse.from(updatedUser, liteResult);
+        return OnboardingResponse.from(updatedUser, liteResult, sanitizedAreas);
     }
 
     /**
@@ -126,7 +129,10 @@ public class UserService {
     }
 
     private List<String> sanitizePreferredAreas(OnboardingRequest request) {
-        List<String> sanitizedAreas = request.getSanitizedPreferredAreas();
+        List<String> sanitizedAreas = request.getSanitizedPreferredAreas().stream()
+                .map(this::extractGugunName)
+                .filter(area -> area != null && !area.isBlank())
+                .toList();
         if (sanitizedAreas.isEmpty()) {
             throw new IllegalArgumentException("선호 지역은 최소 1개 이상이어야 합니다");
         }
@@ -145,5 +151,45 @@ public class UserService {
             case DsrResult.GRADE_RESTRICTED -> "DANGER";
             default -> grade;
         };
+    }
+
+    /**
+     * 입력 문자열에서 구/군명을 추출 (공백 기준 마지막 토큰)
+     */
+    private String extractGugunName(String regionName) {
+        if (regionName == null) {
+            return null;
+        }
+        String normalized = regionName.trim();
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+        String[] tokens = normalized.split("\\s+");
+        return tokens[tokens.length - 1];
+    }
+
+    /**
+     * 회원탈퇴 (Soft Delete)
+     * 
+     * @param email 탈퇴할 사용자 이메일
+     * @param password 비밀번호 확인용
+     */
+    @Transactional
+    public void deleteAccount(String email, String password) {
+        User user = userMapper.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND));
+        
+        // 비밀번호 확인
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new InvalidPasswordException();
+        }
+        
+        // Soft Delete
+        int deletedRows = userMapper.softDeleteUser(user.getId());
+        if (deletedRows == 0) {
+            throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND);
+        }
+        
+        log.info("Account deleted (soft). userId: {}, email: {}", user.getId(), email);
     }
 }

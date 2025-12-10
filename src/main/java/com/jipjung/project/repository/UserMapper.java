@@ -92,4 +92,17 @@ public interface UserMapper {
             @Param("annualIncome") Long annualIncome,
             @Param("existingLoanMonthly") Long existingLoanMonthly
     );
+
+    /**
+     * 사용자 Soft Delete (is_deleted = true, is_active = false)
+     */
+    @Update("""
+        UPDATE `user`
+        SET is_deleted = true,
+            is_active = false,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND is_deleted = false
+    """)
+    int softDeleteUser(@Param("userId") Long userId);
 }

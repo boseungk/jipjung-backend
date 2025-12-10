@@ -1,9 +1,11 @@
 package com.jipjung.project.repository;
 
 import com.jipjung.project.controller.dto.request.ApartmentSearchRequest;
+import com.jipjung.project.controller.dto.response.RegionCoordinatesResponse;
 import com.jipjung.project.domain.Apartment;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,4 +51,22 @@ public interface ApartmentMapper {
      * @return 아파트 개수
      */
     int count(@Param("request") ApartmentSearchRequest request);
+
+    /**
+     * 지역명으로 평균 좌표 조회
+     * @param regionName 지역명 (구/군명, 예: 강남구)
+     * @return 평균 좌표 (없으면 null)
+     */
+    @Select("""
+        SELECT 
+            #{regionName} AS region,
+            AVG(a.latitude) AS latitude,
+            AVG(a.longitude) AS longitude
+        FROM apartment a
+        JOIN dongcode d ON a.dong_code = d.dong_code
+        WHERE TRIM(d.gugun_name) = #{regionName}
+          AND a.latitude IS NOT NULL 
+          AND a.longitude IS NOT NULL
+        """)
+    RegionCoordinatesResponse findAverageCoordinatesByRegion(@Param("regionName") String regionName);
 }

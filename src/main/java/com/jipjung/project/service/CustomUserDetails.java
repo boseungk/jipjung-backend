@@ -40,7 +40,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !Boolean.TRUE.equals(user.getIsDeleted());
     }
 
     @Override
@@ -50,7 +50,9 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        boolean active = user.getIsActive() == null || Boolean.TRUE.equals(user.getIsActive());
+        boolean deleted = Boolean.TRUE.equals(user.getIsDeleted());
+        return active && !deleted;
     }
 
     // 추가 메서드

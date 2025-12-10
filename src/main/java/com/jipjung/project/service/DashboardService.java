@@ -137,41 +137,44 @@ public class DashboardService {
         // 1. User 조회 (is_deleted=false, 없으면 예외)
         User user = findUserOrThrow(userId);
 
-        // 2. GrowthLevel 조회 (없으면 기본 레벨로 재조회)
+        // 2. 선호 지역 조회 (구/군)
+        List<String> preferredAreas = loadPreferredAreas(userId);
+
+        // 3. GrowthLevel 조회 (없으면 기본 레벨로 재조회)
         ResolvedLevel resolvedLevel = resolveGrowthLevel(resolveUserLevel(user));
         int userLevel = resolvedLevel.level();
         GrowthLevel level = resolvedLevel.growthLevel();
 
-        // 3. totalSteps 조회
+        // 4. totalSteps 조회
         int totalSteps = resolveTotalSteps();
 
-        // 4. DreamHome 조회 (없으면 null)
+        // 5. DreamHome 조회 (없으면 null)
         DreamHome dreamHome = dreamHomeMapper.findActiveByUserId(userId);
 
-        // 5. ThemeAsset 조회 (fallback + 로깅)
+        // 6. ThemeAsset 조회 (fallback + 로깅)
         ThemeAsset themeAsset = resolveThemeAsset(user.getSelectedThemeId(), userLevel);
 
-        // 6. Streak 조회
+        // 7. Streak 조회
         LocalDate today = LocalDate.now(clock);
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
         List<StreakHistory> weeklyStreaks = streakHistoryMapper.findByUserIdAndWeek(userId, weekStart, weekEnd);
         boolean todayParticipated = streakHistoryMapper.existsByUserIdAndDate(userId, today);
 
-        // 7. Assets 데이터 구축 (윈도우 기반)
+        // 8. Assets 데이터 구축 (윈도우 기반)
         AssetsData assetsData = buildAssetsData(dreamHome, today);
 
-        // 8. DSR 계산 - PRO 결과 우선 (Phase 2)
+        // 9. DSR 계산 - PRO 결과 우선 (Phase 2)
         DsrCalculationContext dsrContext = resolveDsrContext(userId, user);
         DsrSection dsrSection = DsrSection.from(user, dsrContext.dsrResult(), dsrContext.recognizedAnnualIncome());
 
-        // 9. Gap Analysis 계산 (Phase 2)
-        GapAnalysisSection gapAnalysis = buildGapAnalysis(userId, user, dreamHome, dsrContext.maxLoanAmount());
+        // 10. Gap Analysis 계산 (Phase 2)
+        GapAnalysisSection gapAnalysis = buildGapAnalysis(userId, user, dreamHome, dsrContext.maxLoanAmount(), preferredAreas);
 
-        // 10. 응답 생성
+        // 11. 응답 생성
         return DashboardResponse.from(
                 user, level, dreamHome, weeklyStreaks,
-                todayParticipated, assetsData, themeAsset, totalSteps, dsrSection, gapAnalysis
+                todayParticipated, assetsData, themeAsset, totalSteps, dsrSection, gapAnalysis, preferredAreas
         );
     }
 
@@ -212,13 +215,13 @@ public class DashboardService {
     /**
      * Gap Analysis 구축
      */
-    private GapAnalysisSection buildGapAnalysis(Long userId, User user, DreamHome dreamHome, long maxLoanAmount) {
+    private GapAnalysisSection buildGapAnalysis(Long userId, User user, DreamHome dreamHome, long maxLoanAmount, List<String> preferredAreas) {
         if (dreamHome != null) {
             // 목표 설정됨
             return GapAnalysisSection.from(dreamHome, user, maxLoanAmount);
         } else {
             // 목표 미설정 → 선호 지역 평균 시세로 임시 목표
-            long regionAvgPrice = getRegionAveragePrice(userId);
+            long regionAvgPrice = getRegionAveragePrice(userId, preferredAreas);
             return GapAnalysisSection.forNoTarget(user, maxLoanAmount, regionAvgPrice);
         }
     }
@@ -229,14 +232,13 @@ public class DashboardService {
      * - 해당 지역의 최근 거래 평균가
      * - 실패 시 기본값(9.5억) 반환
      */
-    private long getRegionAveragePrice(Long userId) {
+    private long getRegionAveragePrice(Long userId, List<String> preferredAreas) {
         try {
-            List<String> preferredAreas = userPreferredAreaMapper.findByUserId(userId);
             if (preferredAreas == null || preferredAreas.isEmpty()) {
                 return DEFAULT_REGION_AVG_PRICE;
             }
 
-            String firstArea = preferredAreas.get(0);
+            String firstArea = normalizeToGugun(preferredAreas.get(0));
             Long avgPrice = apartmentDealMapper.findAverageRecentDealAmountByGugun(firstArea);
             if (avgPrice != null && avgPrice > 0) {
                 return avgPrice;
@@ -273,6 +275,24 @@ public class DashboardService {
             throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND);
         }
         return user;
+    }
+
+    private List<String> loadPreferredAreas(Long userId) {
+        try {
+            List<String> preferredAreas = userPreferredAreaMapper.findByUserId(userId);
+            if (preferredAreas == null || preferredAreas.isEmpty()) {
+                return List.of();
+            }
+
+            return preferredAreas.stream()
+                    .map(this::normalizeToGugun)
+                    .filter(area -> area != null && !area.isEmpty())
+                    .distinct()
+                    .toList();
+        } catch (DataAccessException e) {
+            log.warn("Failed to load preferred areas for user {}. Returning empty list.", userId, e);
+            return List.of();
+        }
     }
 
     private int resolveUserLevel(User user) {
@@ -391,6 +411,18 @@ public class DashboardService {
 
     private <T> T defaultIfNull(T value, T defaultValue) {
         return value != null ? value : defaultValue;
+    }
+
+    private String normalizeToGugun(String regionName) {
+        if (regionName == null) {
+            return null;
+        }
+        String normalized = regionName.trim();
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+        String[] tokens = normalized.split("\\s+");
+        return tokens[tokens.length - 1];
     }
 
     private record ResolvedLevel(int level, GrowthLevel growthLevel) {}

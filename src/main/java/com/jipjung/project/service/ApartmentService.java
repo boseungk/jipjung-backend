@@ -9,6 +9,7 @@ import com.jipjung.project.controller.dto.response.ApartmentDetailResponse;
 import com.jipjung.project.controller.dto.response.ApartmentListPageResponse;
 import com.jipjung.project.controller.dto.response.ApartmentListResponse;
 import com.jipjung.project.controller.dto.response.FavoriteResponse;
+import com.jipjung.project.controller.dto.response.RegionCoordinatesResponse;
 import com.jipjung.project.domain.Apartment;
 import com.jipjung.project.domain.FavoriteApartment;
 import com.jipjung.project.repository.ApartmentMapper;
@@ -126,5 +127,42 @@ public class ApartmentService {
         if (!favorite.getUserId().equals(userId)) {
             throw new IllegalArgumentException("본인의 관심 아파트만 삭제할 수 있습니다");
         }
+    }
+
+    /**
+     * 지역명으로 좌표 조회
+     * 해당 지역의 아파트 평균 좌표를 반환합니다.
+     * 
+     * @param regionName 지역명 (예: 강남구, 서초구)
+     * @return 지역 좌표 (없으면 서울시청 기본 좌표)
+     */
+    @Transactional(readOnly = true)
+    public RegionCoordinatesResponse getRegionCoordinates(String regionName) {
+        String normalizedRegion = normalizeToGugun(regionName);
+        RegionCoordinatesResponse coords = apartmentMapper.findAverageCoordinatesByRegion(normalizedRegion);
+        
+        // 좌표가 없거나 null인 경우 기본값 반환
+        if (coords == null || coords.latitude() == null || coords.longitude() == null) {
+            return RegionCoordinatesResponse.defaultCoordinates(normalizedRegion);
+        }
+        
+        return coords;
+    }
+
+    /**
+     * 입력 문자열에서 구/군명을 추출해 정규화
+     * - "서울특별시 강남구" -> "강남구"
+     * - 공백 기준 마지막 토큰을 사용
+     */
+    private String normalizeToGugun(String regionName) {
+        if (regionName == null) {
+            throw new IllegalArgumentException("지역명을 입력해주세요");
+        }
+        String normalized = regionName.trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("지역명을 입력해주세요");
+        }
+        String[] tokens = normalized.split("\\s+");
+        return tokens[tokens.length - 1]; // 마지막 토큰을 구/군명으로 사용
     }
 }

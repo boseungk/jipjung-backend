@@ -20,7 +20,10 @@ public interface ApartmentDealMapper {
         FROM apartment_deal ad
         JOIN apartment a ON ad.apt_seq = a.apt_seq
         JOIN dongcode d ON a.dong_code = d.dong_code
-        WHERE d.gugun_name = #{gugunName}
+        WHERE (
+            TRIM(d.gugun_name) = #{gugunName}
+            OR CONCAT(TRIM(d.sido_name), ' ', TRIM(d.gugun_name)) = #{gugunName}
+        )
           AND ad.deal_year >= YEAR(CURDATE()) - 1
     """)
     Long findAverageRecentDealAmountByGugun(@Param("gugunName") String gugunName);
