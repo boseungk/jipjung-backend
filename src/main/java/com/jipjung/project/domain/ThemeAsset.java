@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ThemeAsset {
 
-    public static final String DEFAULT_IMAGE_URL = "/assets/house/default.png";
+    public static final String DEFAULT_IMAGE_URL = "/phase7.svg";
 
     private Long assetId;
     private Integer themeId;

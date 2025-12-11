@@ -27,6 +27,10 @@ public enum ErrorCode {
     FAVORITE_NOT_FOUND(404, "관심 아파트를 찾을 수 없습니다"),
     DREAM_HOME_NOT_FOUND(404, "활성 드림홈이 없습니다"),
     AI_CONVERSATION_NOT_FOUND(404, "AI 대화를 찾을 수 없습니다"),
+    THEME_NOT_FOUND(404, "테마를 찾을 수 없습니다"),
+
+    // 400 Bad Request - Theme
+    THEME_NOT_ACTIVE(400, "비활성화된 테마입니다"),
 
     // 409 Conflict
     DUPLICATE_EMAIL(409, "이미 존재하는 이메일입니다"),
