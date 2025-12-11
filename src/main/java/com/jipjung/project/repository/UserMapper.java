@@ -111,4 +111,22 @@ public interface UserMapper {
           AND is_deleted = false
     """)
     int softDeleteUser(@Param("userId") Long userId);
+
+    /**
+     * 사용자의 선택 테마 업데이트
+     * <p>
+     * 드림홈 설정 시 사용자가 선택한 테마 ID를 저장.
+     *
+     * @param userId  사용자 ID
+     * @param themeId 테마 ID
+     * @return 업데이트 영향 행 수
+     */
+    @Update("""
+        UPDATE `user`
+        SET selected_theme_id = #{themeId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND is_deleted = false
+    """)
+    int updateSelectedTheme(@Param("userId") Long userId, @Param("themeId") Integer themeId);
 }
