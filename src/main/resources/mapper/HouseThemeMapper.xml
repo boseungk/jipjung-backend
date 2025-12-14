@@ -10,6 +10,7 @@
         <id property="themeId" column="theme_id"/>
         <result property="themeCode" column="theme_code"/>
         <result property="themeName" column="theme_name"/>
+        <result property="imagePath" column="image_path"/>
         <result property="isActive" column="is_active"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -18,7 +19,7 @@
 
     <!-- 활성 테마 목록 조회 -->
     <select id="findAllActive" resultMap="HouseThemeResultMap">
-        SELECT theme_id, theme_code, theme_name, is_active, created_at, updated_at, is_deleted
+        SELECT theme_id, theme_code, theme_name, image_path, is_active, created_at, updated_at, is_deleted
         FROM house_theme
         WHERE is_active = TRUE
           AND is_deleted = FALSE
@@ -27,7 +28,7 @@
 
     <!-- 테마 ID로 단건 조회 (삭제되지 않은 것만) -->
     <select id="findById" resultMap="HouseThemeResultMap">
-        SELECT theme_id, theme_code, theme_name, is_active, created_at, updated_at, is_deleted
+        SELECT theme_id, theme_code, theme_name, image_path, is_active, created_at, updated_at, is_deleted
         FROM house_theme
         WHERE theme_id = #{themeId}
           AND is_deleted = FALSE

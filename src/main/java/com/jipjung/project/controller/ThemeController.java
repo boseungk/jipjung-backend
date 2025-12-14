@@ -1,5 +1,6 @@
 package com.jipjung.project.controller;
 
+import com.jipjung.project.controller.dto.response.HouseThemeResponse;
 import com.jipjung.project.domain.HouseTheme;
 import com.jipjung.project.global.response.ApiResponse;
 import com.jipjung.project.repository.HouseThemeMapper;
@@ -59,7 +60,7 @@ public class ThemeController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "테마 목록 조회 성공",
-                    content = @Content(schema = @Schema(implementation = HouseTheme.class))
+                    content = @Content(schema = @Schema(implementation = HouseThemeResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
@@ -67,9 +68,12 @@ public class ThemeController {
             )
     })
     @GetMapping
-    public ResponseEntity<ApiResponse<List<HouseTheme>>> getActiveThemes() {
+    public ResponseEntity<ApiResponse<List<HouseThemeResponse>>> getActiveThemes() {
         List<HouseTheme> themes = houseThemeMapper.findAllActive();
         log.debug("조회된 활성 테마 수: {}", themes.size());
-        return ApiResponse.success(themes);
+        List<HouseThemeResponse> response = themes.stream()
+                .map(HouseThemeResponse::from)
+                .toList();
+        return ApiResponse.success(response);
     }
 }

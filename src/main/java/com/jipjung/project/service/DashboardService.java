@@ -56,7 +56,7 @@ public class DashboardService {
 
     private final UserMapper userMapper;
     private final GrowthLevelMapper growthLevelMapper;
-    private final ThemeAssetMapper themeAssetMapper;
+    private final HouseThemeMapper houseThemeMapper;
     private final DreamHomeMapper dreamHomeMapper;
     private final SavingsHistoryMapper savingsHistoryMapper;
     private final StreakHistoryMapper streakHistoryMapper;
@@ -64,6 +64,7 @@ public class DashboardService {
     private final UserPreferredAreaMapper userPreferredAreaMapper;
     private final ApartmentDealMapper apartmentDealMapper;
     private final DsrService dsrService;
+    private final StreakService streakService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -71,7 +72,7 @@ public class DashboardService {
     public DashboardService(
             UserMapper userMapper,
             GrowthLevelMapper growthLevelMapper,
-            ThemeAssetMapper themeAssetMapper,
+            HouseThemeMapper houseThemeMapper,
             DreamHomeMapper dreamHomeMapper,
             SavingsHistoryMapper savingsHistoryMapper,
             StreakHistoryMapper streakHistoryMapper,
@@ -79,12 +80,13 @@ public class DashboardService {
             UserPreferredAreaMapper userPreferredAreaMapper,
             ApartmentDealMapper apartmentDealMapper,
             DsrService dsrService,
+            StreakService streakService,
             ObjectMapper objectMapper
     ) {
         this(
                 userMapper,
                 growthLevelMapper,
-                themeAssetMapper,
+                houseThemeMapper,
                 dreamHomeMapper,
                 savingsHistoryMapper,
                 streakHistoryMapper,
@@ -92,6 +94,7 @@ public class DashboardService {
                 userPreferredAreaMapper,
                 apartmentDealMapper,
                 dsrService,
+                streakService,
                 objectMapper,
                 Clock.system(ZONE_KST)
         );
@@ -100,7 +103,7 @@ public class DashboardService {
     public DashboardService(
             UserMapper userMapper,
             GrowthLevelMapper growthLevelMapper,
-            ThemeAssetMapper themeAssetMapper,
+            HouseThemeMapper houseThemeMapper,
             DreamHomeMapper dreamHomeMapper,
             SavingsHistoryMapper savingsHistoryMapper,
             StreakHistoryMapper streakHistoryMapper,
@@ -108,12 +111,13 @@ public class DashboardService {
             UserPreferredAreaMapper userPreferredAreaMapper,
             ApartmentDealMapper apartmentDealMapper,
             DsrService dsrService,
+            StreakService streakService,
             ObjectMapper objectMapper,
             Clock clock
     ) {
         this.userMapper = userMapper;
         this.growthLevelMapper = growthLevelMapper;
-        this.themeAssetMapper = themeAssetMapper;
+        this.houseThemeMapper = houseThemeMapper;
         this.dreamHomeMapper = dreamHomeMapper;
         this.savingsHistoryMapper = savingsHistoryMapper;
         this.streakHistoryMapper = streakHistoryMapper;
@@ -121,18 +125,21 @@ public class DashboardService {
         this.userPreferredAreaMapper = userPreferredAreaMapper;
         this.apartmentDealMapper = apartmentDealMapper;
         this.dsrService = dsrService;
+        this.streakService = streakService;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
 
     /**
      * 대시보드 통합 데이터 조회
+     * <p>
+     * 대시보드 접속 시 활동 기반 스트릭에 참여하므로 쓰기 트랜잭션이 필요합니다.
      *
      * @param userId 사용자 ID
      * @return 대시보드 응답 DTO
      * @throws ResourceNotFoundException 사용자를 찾을 수 없는 경우
      */
-    @Transactional
+    @Transactional(readOnly = false)
     public DashboardResponse getDashboard(Long userId) {
         // 1. User 조회 (is_deleted=false, 없으면 예외)
         User user = findUserOrThrow(userId);
@@ -151,8 +158,8 @@ public class DashboardService {
         // 5. DreamHome 조회 (없으면 null)
         DreamHome dreamHome = dreamHomeMapper.findActiveByUserId(userId);
 
-        // 6. ThemeAsset 조회 (fallback + 로깅)
-        ThemeAsset themeAsset = resolveThemeAsset(user.getSelectedThemeId(), userLevel);
+        // 6. HouseTheme 조회 (fallback + 로깅)
+        HouseTheme houseTheme = resolveHouseTheme(user.getSelectedThemeId());
 
         // 7. Streak 조회
         LocalDate today = LocalDate.now(clock);
@@ -171,10 +178,18 @@ public class DashboardService {
         // 10. Gap Analysis 계산 (Phase 2)
         GapAnalysisSection gapAnalysis = buildGapAnalysis(userId, user, dreamHome, dsrContext.maxLoanAmount(), preferredAreas);
 
-        // 11. 응답 생성
+        // 11. 대시보드 접속 스트릭 참여 (1일 1회)
+        try {
+            streakService.participate(userId, ActivityType.DASHBOARD);
+        } catch (Exception e) {
+            log.warn("Dashboard streak participation failed for userId: {}", userId, e);
+            // 실패해도 대시보드 조회는 정상 진행
+        }
+
+        // 12. 응답 생성
         return DashboardResponse.from(
                 user, level, dreamHome, weeklyStreaks,
-                todayParticipated, assetsData, themeAsset, totalSteps, dsrSection, gapAnalysis, preferredAreas
+                todayParticipated, assetsData, houseTheme, totalSteps, dsrSection, gapAnalysis, preferredAreas
         );
     }
 
@@ -304,22 +319,31 @@ public class DashboardService {
         return count > 0 ? count : DEFAULT_TOTAL_STEPS;
     }
 
-    private ThemeAsset resolveThemeAsset(Integer selectedThemeId, int level) {
+    private HouseTheme resolveHouseTheme(Integer selectedThemeId) {
         if (selectedThemeId != null) {
-            ThemeAsset asset = themeAssetMapper.findByThemeAndLevel(selectedThemeId, level);
-            if (asset != null) {
-                return asset;
+            HouseTheme theme = houseThemeMapper.findById(selectedThemeId);
+            if (theme != null && Boolean.TRUE.equals(theme.getIsActive())) {
+                return theme;
             }
-            log.warn("Theme {} not found for level {}. Falling back to default theme.", selectedThemeId, level);
+            log.warn("Theme {} not found or inactive. Falling back to default theme.", selectedThemeId);
         }
 
-        ThemeAsset fallback = themeAssetMapper.findByThemeAndLevel(DEFAULT_THEME_ID, level);
-        if (fallback != null) {
+        HouseTheme fallback = houseThemeMapper.findById(DEFAULT_THEME_ID);
+        if (fallback != null && Boolean.TRUE.equals(fallback.getIsActive())) {
             return fallback;
         }
+        if (fallback != null) {
+            log.warn("Default theme {} is inactive. Using built-in default.", DEFAULT_THEME_ID);
+        }
 
-        log.error("Default theme asset not found for level {}. Using default image.", level);
-        return ThemeAsset.defaultAsset();
+        log.error("Default theme (id={}) not found. Using built-in default.", DEFAULT_THEME_ID);
+        return HouseTheme.builder()
+                .themeId(DEFAULT_THEME_ID)
+                .themeCode("MODERN")
+                .themeName("모던 하우스")
+                .imagePath(null)  // getFullImageUrl()에서 폴백 처리
+                .isActive(true)
+                .build();
     }
 
     private ResolvedLevel resolveGrowthLevel(int requestedLevel) {

@@ -37,7 +37,7 @@ public record DashboardResponse(
             List<StreakHistory> weeklyStreaks,
             boolean todayParticipated,
             AssetsData assetsData,
-            ThemeAsset themeAsset,
+            HouseTheme houseTheme,
             int totalSteps,
             DsrSection dsrSection,
             GapAnalysisSection gapAnalysis,
@@ -49,7 +49,7 @@ public record DashboardResponse(
                 StreakSection.from(user, weeklyStreaks, todayParticipated),
                 dsrSection,
                 AssetsSection.from(assetsData),
-                ShowroomSection.from(user, level, themeAsset, totalSteps),
+                ShowroomSection.from(user, level, houseTheme, totalSteps),
                 gapAnalysis
         );
     }
@@ -437,7 +437,7 @@ public record DashboardResponse(
         private static final String DEFAULT_STEP_DESCRIPTION = "기초 공사를 시작합니다";
         private static final int DEFAULT_TOTAL_STEPS = 7;
 
-        public static ShowroomSection from(User user, GrowthLevel level, ThemeAsset themeAsset, int totalSteps) {
+        public static ShowroomSection from(User user, GrowthLevel level, HouseTheme houseTheme, int totalSteps) {
             int steps = totalSteps > 0 ? totalSteps : DEFAULT_TOTAL_STEPS;
             int rawCurrentStep = user.getCurrentLevel() != null ? user.getCurrentLevel() : 1;
             int currentStep = Math.min(Math.max(rawCurrentStep, 1), steps);
@@ -446,8 +446,8 @@ public record DashboardResponse(
                     ? level.getStepName() : DEFAULT_STEP_TITLE;
             String stepDescription = level != null && level.getDescription() != null
                     ? level.getDescription() : DEFAULT_STEP_DESCRIPTION;
-            String imageUrl = themeAsset != null && themeAsset.getImageUrl() != null
-                    ? themeAsset.getImageUrl() : ThemeAsset.DEFAULT_IMAGE_URL;
+            // HouseTheme.getFullImageUrl()가 CDN URL 또는 폴백 경로 반환
+            String imageUrl = houseTheme != null ? houseTheme.getFullImageUrl() : "/" + HouseTheme.DEFAULT_IMAGE_PATH;
 
             return new ShowroomSection(currentStep, steps, stepTitle, stepDescription, imageUrl);
         }

@@ -5,6 +5,8 @@ import com.jipjung.project.domain.GrowthLevel;
 import com.jipjung.project.domain.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import javax.annotation.Nullable;
+
 /**
  * 저축 기록 응답 DTO
  */
@@ -15,7 +17,11 @@ public record SavingsRecordResponse(
         DreamHomeStatus dreamHomeStatus,
 
         @Schema(description = "성장(집 짓기) 결과")
-        GrowthResult growth
+        GrowthResult growth,
+
+        @Schema(description = "스트릭 정보 (오늘 첫 저축 시에만 포함)", nullable = true)
+        @Nullable
+        StreakInfo streakInfo
 ) {
 
     /**
@@ -62,8 +68,12 @@ public record SavingsRecordResponse(
     ) {
     }
 
+    // =========================================================================
+    // 팩토리 메서드
+    // =========================================================================
+
     /**
-     * 팩토리 메서드
+     * 기존 팩토리 메서드 (하위 호환성)
      */
     public static SavingsRecordResponse from(
             DreamHome dreamHome,
@@ -71,6 +81,27 @@ public record SavingsRecordResponse(
             User user,
             GrowthLevel currentLevel,
             boolean isLevelUp
+    ) {
+        return from(dreamHome, expChange, user, currentLevel, isLevelUp, null);
+    }
+
+    /**
+     * 스트릭 정보 포함 팩토리 메서드
+     *
+     * @param dreamHome    드림홈 정보
+     * @param expChange    경험치 변화량
+     * @param user         사용자 정보
+     * @param currentLevel 현재 레벨 정보
+     * @param isLevelUp    레벨업 여부
+     * @param streakInfo   스트릭 정보 (nullable)
+     */
+    public static SavingsRecordResponse from(
+            DreamHome dreamHome,
+            int expChange,
+            User user,
+            GrowthLevel currentLevel,
+            boolean isLevelUp,
+            StreakInfo streakInfo
     ) {
         // 드림홈 상태
         DreamHomeStatus status = new DreamHomeStatus(
@@ -90,6 +121,6 @@ public record SavingsRecordResponse(
                 currentLevel != null ? currentLevel.getStepName() : "터파기"
         );
 
-        return new SavingsRecordResponse(status, growth);
+        return new SavingsRecordResponse(status, growth, streakInfo);
     }
 }

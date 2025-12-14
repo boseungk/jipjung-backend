@@ -4,6 +4,7 @@ import com.jipjung.project.controller.dto.request.DreamHomeSetRequest;
 import com.jipjung.project.controller.dto.request.SavingsRecordRequest;
 import com.jipjung.project.controller.dto.response.DreamHomeSetResponse;
 import com.jipjung.project.controller.dto.response.SavingsRecordResponse;
+import com.jipjung.project.controller.dto.response.StreakInfo;
 import com.jipjung.project.domain.*;
 import com.jipjung.project.global.exception.BusinessException;
 import com.jipjung.project.global.exception.ErrorCode;
@@ -33,12 +34,11 @@ public class DreamHomeService {
     private final GrowthLevelMapper growthLevelMapper;
     private final HouseThemeMapper houseThemeMapper;
     private final DsrService dsrService;
+    private final StreakService streakService;
 
     private static final long EXP_PER_UNIT = 100_000L;
     private static final int EXP_AMOUNT = 10;
     private static final int MAX_EXP_PER_SAVINGS = 500;
-    private static final int MAX_LEVEL = 7;
-    private static final int[] LEVEL_THRESHOLDS = {0, 100, 300, 600, 1000, 1500, 2100};
 
     // =========================================================================
     // Public API Methods
@@ -73,7 +73,13 @@ public class DreamHomeService {
 
         ExpLevelResult expResult = processExpAndLevel(userId, request);
 
-        return buildSavingsResponse(dreamHome, newSavedAmount, isCompleted, expResult);
+        // 입금(DEPOSIT) 시에만 스트릭 자동 참여
+        StreakService.StreakResult streakResult = null;
+        if (request.saveType() == SaveType.DEPOSIT) {
+            streakResult = streakService.participate(userId, ActivityType.SAVINGS);
+        }
+
+        return buildSavingsResponse(dreamHome, newSavedAmount, isCompleted, expResult, streakResult);
     }
 
     // =========================================================================
@@ -247,16 +253,16 @@ public class DreamHomeService {
 
     private ExpLevelResult processExpAndLevel(Long userId, SavingsRecordRequest request) {
         int expChange = calculateExpChange(request.saveType(), request.amount());
-        User user = userMapper.findById(userId);
+        User user = userMapper.findByIdForUpdate(userId);
 
-        int oldLevel = nullToDefault(user.getCurrentLevel(), 1);
-        int oldExp = nullToDefault(user.getCurrentExp(), 0);
+        int oldLevel = LevelPolicy.normalizeLevel(user.getCurrentLevel());
+        int oldExp = LevelPolicy.normalizeExp(user.getCurrentExp());
 
         applyExpIfPositive(userId, expChange);
 
         int newExp = oldExp + expChange;
-        int newLevel = calculateNewLevel(newExp);
-        boolean isLevelUp = checkAndApplyLevelUp(userId, oldLevel, newLevel);
+        int newLevel = LevelPolicy.calculateLevel(newExp);
+        boolean isLevelUp = applyLevelUpIfNeeded(userId, oldLevel, newLevel);
 
         User updatedUser = userMapper.findById(userId);
         GrowthLevel growthLevel = growthLevelMapper.findByLevel(nullToDefault(updatedUser.getCurrentLevel(), 1));
@@ -270,8 +276,8 @@ public class DreamHomeService {
         }
     }
 
-    private boolean checkAndApplyLevelUp(Long userId, int oldLevel, int newLevel) {
-        if (newLevel <= oldLevel || newLevel > MAX_LEVEL) {
+    private boolean applyLevelUpIfNeeded(Long userId, int oldLevel, int newLevel) {
+        if (newLevel <= oldLevel) {
             return false;
         }
         userMapper.updateLevel(userId, newLevel);
@@ -288,15 +294,6 @@ public class DreamHomeService {
         return Math.min(exp, MAX_EXP_PER_SAVINGS);
     }
 
-    private int calculateNewLevel(int currentExp) {
-        for (int level = MAX_LEVEL; level >= 1; level--) {
-            if (currentExp >= LEVEL_THRESHOLDS[level - 1]) {
-                return level;
-            }
-        }
-        return 1;
-    }
-
     // =========================================================================
     // Response Building
     // =========================================================================
@@ -305,7 +302,8 @@ public class DreamHomeService {
             DreamHome dreamHome,
             long newSavedAmount,
             boolean isCompleted,
-            ExpLevelResult expResult
+            ExpLevelResult expResult,
+            StreakService.StreakResult streakResult
     ) {
         DreamHome updatedDreamHome = DreamHome.builder()
                 .dreamHomeId(dreamHome.getDreamHomeId())
@@ -314,12 +312,23 @@ public class DreamHomeService {
                 .status(isCompleted ? DreamHomeStatus.COMPLETED : DreamHomeStatus.ACTIVE)
                 .build();
 
+        // 스트릭 정보 변환 (오늘 첫 참여 시에만 포함)
+        StreakInfo streakInfo = null;
+        if (streakResult != null && !streakResult.alreadyParticipated()) {
+            streakInfo = new StreakInfo(
+                    streakResult.currentStreak(),
+                    streakResult.maxStreak(),
+                    streakResult.expEarned()
+            );
+        }
+
         return SavingsRecordResponse.from(
                 updatedDreamHome,
                 expResult.expChange(),
                 expResult.user(),
                 expResult.growthLevel(),
-                expResult.isLevelUp()
+                expResult.isLevelUp(),
+                streakInfo
         );
     }
 
