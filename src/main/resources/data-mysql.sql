@@ -161,43 +161,16 @@ INSERT INTO growth_level (level, step_name, description, required_exp, is_delete
 (7, '완공', '드디어 집이 완성되었습니다!', 0, false);
 
 -- ============================================================================
--- 5. house_theme 데이터 (테마 3종)
+-- 5. house_theme 데이터 (테마 3종) - image_path는 상대 경로만 저장
 -- ============================================================================
 
-INSERT INTO house_theme (theme_id, theme_code, theme_name, is_active, is_deleted) VALUES
-(1, 'MODERN', '모던 하우스', true, false),
-(2, 'HANOK', '한옥', true, false),
-(3, 'CASTLE', '캐슬', true, false);
+INSERT INTO house_theme (theme_id, theme_code, theme_name, image_path, is_active, is_deleted) VALUES
+(1, 'MODERN', '모던 하우스', 'themes/modern/phase.svg', true, false),
+(2, 'HANOK', '한옥', 'themes/hanok/phase.svg', true, false),
+(3, 'CASTLE', '캐슬', 'themes/castle/phase.svg', true, false);
 
--- ============================================================================
--- 6. theme_asset 데이터 (테마별 레벨 이미지)
--- ============================================================================
-
-INSERT INTO theme_asset (theme_id, level, image_url, is_deleted) VALUES
--- MODERN 테마
-(1, 1, '/assets/house/modern/level1.png', false),
-(1, 2, '/assets/house/modern/level2.png', false),
-(1, 3, '/assets/house/modern/level3.png', false),
-(1, 4, '/assets/house/modern/level4.png', false),
-(1, 5, '/assets/house/modern/level5.png', false),
-(1, 6, '/assets/house/modern/level6.png', false),
-(1, 7, '/assets/house/modern/level7.png', false),
--- HANOK 테마
-(2, 1, '/assets/house/hanok/level1.png', false),
-(2, 2, '/assets/house/hanok/level2.png', false),
-(2, 3, '/assets/house/hanok/level3.png', false),
-(2, 4, '/assets/house/hanok/level4.png', false),
-(2, 5, '/assets/house/hanok/level5.png', false),
-(2, 6, '/assets/house/hanok/level6.png', false),
-(2, 7, '/assets/house/hanok/level7.png', false),
--- CASTLE 테마
-(3, 1, '/assets/house/castle/level1.png', false),
-(3, 2, '/assets/house/castle/level2.png', false),
-(3, 3, '/assets/house/castle/level3.png', false),
-(3, 4, '/assets/house/castle/level4.png', false),
-(3, 5, '/assets/house/castle/level5.png', false),
-(3, 6, '/assets/house/castle/level6.png', false),
-(3, 7, '/assets/house/castle/level7.png', false);
+-- theme_asset 테이블 삭제됨 (단일 SVG per theme 아키텍처)
+-- 이제 house_theme.image_path 사용
 
 -- ============================================================================
 -- End of Data Migration

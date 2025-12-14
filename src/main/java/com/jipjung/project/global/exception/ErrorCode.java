@@ -38,7 +38,12 @@ public enum ErrorCode {
 
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다"),
-    AI_SERVICE_ERROR(500, "AI 서비스 오류가 발생했습니다");
+    AI_SERVICE_ERROR(500, "AI 서비스 오류가 발생했습니다"),
+
+    // Streak 관련 에러
+    STREAK_ALREADY_PARTICIPATED(400, "오늘 이미 스트릭에 참여했습니다"),
+    STREAK_REWARD_NOT_ELIGIBLE(400, "보상 수령 조건을 충족하지 않습니다"),
+    STREAK_REWARD_ALREADY_CLAIMED(400, "이미 수령한 마일스톤 보상입니다");
 
     private final int status;
     private final String message;

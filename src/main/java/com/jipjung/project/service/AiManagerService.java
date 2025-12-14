@@ -10,6 +10,7 @@ import com.jipjung.project.controller.dto.request.SpendingAnalyzeRequest;
 import com.jipjung.project.controller.dto.response.AiHistoryResponse;
 import com.jipjung.project.controller.dto.response.JudgmentResponse;
 import com.jipjung.project.controller.dto.response.SpendingAnalyzeResponse;
+import com.jipjung.project.domain.ActivityType;
 import com.jipjung.project.domain.AiConversation;
 import com.jipjung.project.domain.ConversationStatus;
 import com.jipjung.project.domain.ExtractionStatus;
@@ -63,6 +64,7 @@ public class AiManagerService {
     private final UserMapper userMapper;
     private final AiConversationMapper aiConversationMapper;
     private final GrowthLevelMapper growthLevelMapper;
+    private final StreakService streakService;
 
     // 경험치 상수
     private static final int EXP_REASONABLE = 50;
@@ -192,6 +194,13 @@ public class AiManagerService {
         log.info("AI judgment completed. userId: {}, conversationId: {}, result: {}, expChange: {}, excuse: {}",
                 userId, conversation.getConversationId(), aiOutput.result(), expChange, request.selectedExcuseId());
 
+        // 7. 스트릭 참여 (AI 판결 활동)
+        try {
+            streakService.participate(userId, ActivityType.AI_JUDGMENT);
+        } catch (Exception e) {
+            log.warn("AI judgment streak participation failed for userId: {}", userId, e);
+        }
+
         return JudgmentResponse.from(aiOutput, updatedUser, levelInfo, expChange, isLevelUp);
     }
 
@@ -238,6 +247,13 @@ public class AiManagerService {
 
         log.info("Manual analysis completed. userId: {}, conversationId: {}, mood: {}",
                 user.getId(), conversation.getConversationId(), aiOutput.mood());
+
+        // 4. 스트릭 참여 (AI 분석 활동)
+        try {
+            streakService.participate(user.getId(), ActivityType.AI_ANALYSIS);
+        } catch (Exception e) {
+            log.warn("AI analysis streak participation failed for userId: {}", user.getId(), e);
+        }
 
         return SpendingAnalyzeResponse.fromManual(conversation, aiOutput);
     }
