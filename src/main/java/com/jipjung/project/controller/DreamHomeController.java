@@ -64,7 +64,7 @@ public class DreamHomeController {
                     저축(입금/출금)을 기록합니다.
 
                     **경험치 규칙:**
-                    - DEPOSIT: 10만원당 10 EXP 획득 (최대 500 EXP/건)
+                    - DEPOSIT: 1만원당 1 EXP 획득 (최대 500 EXP/건)
                     - WITHDRAW: 경험치 획득 없음 (0 EXP)
 
                     **레벨업:**

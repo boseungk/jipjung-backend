@@ -36,8 +36,9 @@ public class DreamHomeService {
     private final DsrService dsrService;
     private final StreakService streakService;
 
-    private static final long EXP_PER_UNIT = 100_000L;
-    private static final int EXP_AMOUNT = 10;
+    // 1만원당 1 EXP (10만원당 10 EXP와 동일 비율이지만, 10만원 미만 저축에도 EXP가 반영되도록 단위를 세분화)
+    private static final long EXP_PER_UNIT = 10_000L;
+    private static final int EXP_AMOUNT = 1;
     private static final int MAX_EXP_PER_SAVINGS = 500;
 
     // =========================================================================
