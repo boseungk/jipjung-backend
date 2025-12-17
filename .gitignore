@@ -38,3 +38,7 @@ build/
 
 # Configuration files with sensitive data
 src/main/resources/application-mysql.properties
+
+# Maven local repository
+.m2/
+.m2repo/

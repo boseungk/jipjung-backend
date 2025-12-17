@@ -280,6 +280,7 @@ CREATE TABLE user_collection (
     collection_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
     theme_id INT NOT NULL,
+    dream_home_id BIGINT COMMENT '원본 드림홈 ID (여정 조회용)',
     house_name VARCHAR(100) COMMENT '유저가 붙인 집 이름',
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '완공 날짜',
     is_main_display BOOLEAN DEFAULT FALSE COMMENT '대표 전시 여부',
@@ -288,6 +289,8 @@ CREATE TABLE user_collection (
 
     FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
     FOREIGN KEY (theme_id) REFERENCES house_theme(theme_id) ON DELETE CASCADE,
+    FOREIGN KEY (dream_home_id) REFERENCES dream_home(dream_home_id) ON DELETE SET NULL,
+    UNIQUE KEY uk_dream_home (dream_home_id),
     INDEX idx_collection_user (user_id)
 ) COMMENT='완성한 집 컬렉션';
 
