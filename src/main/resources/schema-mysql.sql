@@ -25,9 +25,12 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- 2. Drop Tables (in reverse dependency order)
 -- ============================================================================
 
-DROP TABLE IF EXISTS savings_history;
+DROP TABLE IF EXISTS daily_activity;
+DROP TABLE IF EXISTS ai_conversation;
 DROP TABLE IF EXISTS dsr_calculation_history;
+DROP TABLE IF EXISTS savings_history;
 DROP TABLE IF EXISTS user_collection;
+DROP TABLE IF EXISTS streak_milestone_reward;
 DROP TABLE IF EXISTS streak_history;
 DROP TABLE IF EXISTS theme_asset;
 DROP TABLE IF EXISTS dream_home;
@@ -265,7 +268,23 @@ CREATE TABLE streak_history (
 COMMENT='스트릭 기록 테이블';
 
 -- ----------------------------------------------------------------------------
--- 3.13 user_collection - 완성한 집 컬렉션
+-- 3.13 streak_milestone_reward - 스트릭 마일스톤 보상 테이블
+-- ----------------------------------------------------------------------------
+CREATE TABLE streak_milestone_reward (
+    reward_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    milestone_days INT NOT NULL COMMENT '마일스톤 일수 (7, 30, 100)',
+    exp_reward INT NOT NULL COMMENT '지급된 경험치',
+    claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    streak_count_at_claim INT NOT NULL COMMENT '수령 시점의 연속일수',
+
+    FOREIGN KEY (user_id) REFERENCES `user`(user_id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_milestone (user_id, milestone_days)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='스트릭 마일스톤 보상 테이블';
+
+-- ----------------------------------------------------------------------------
+-- 3.14 user_collection - 완성한 집 컬렉션
 -- ----------------------------------------------------------------------------
 CREATE TABLE user_collection (
     collection_id BIGINT AUTO_INCREMENT PRIMARY KEY,

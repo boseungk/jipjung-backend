@@ -61,6 +61,11 @@ public record DashboardResponse(
     @Schema(description = "프로필 섹션")
     public record ProfileSection(
             @Schema(description = "닉네임") String nickname,
+            @Schema(description = "이메일") String email,
+            @Schema(description = "생년") Integer birthYear,
+            @Schema(description = "가입일") String createdAt,
+            @Schema(description = "연소득 (만원 단위)") Long annualIncome,
+            @Schema(description = "기존 대출 월 상환금 (만원 단위)") Long existingLoanMonthly,
             @Schema(description = "칭호 (예: 터파기 건축가)") String title,
             @Schema(description = "상태 메시지") String statusMessage,
             @Schema(description = "현재 레벨") int level,
@@ -71,6 +76,7 @@ public record DashboardResponse(
         private static final String DEFAULT_STATUS_MESSAGE = "목표를 향해 천천히, 꾸준히 가고 있어요";
         private static final int DEFAULT_LEVEL = 1;
         private static final int DEFAULT_REQUIRED_EXP = 100;
+        private static final long WON_TO_MANWON = 10000L;
 
         public static ProfileSection from(User user, GrowthLevel growthLevel, List<String> preferredAreas) {
             String title = growthLevel != null ? growthLevel.getTitle() : DEFAULT_TITLE;
@@ -79,8 +85,23 @@ public record DashboardResponse(
             int requiredExp = growthLevel != null && growthLevel.getRequiredExp() != null
                     ? growthLevel.getRequiredExp() : DEFAULT_REQUIRED_EXP;
 
+            // 원 -> 만원 변환
+            Long annualIncomeManwon = user.getAnnualIncome() != null 
+                    ? user.getAnnualIncome() / WON_TO_MANWON : null;
+            Long existingLoanManwon = user.getExistingLoanMonthly() != null 
+                    ? user.getExistingLoanMonthly() / WON_TO_MANWON : null;
+
+            // createdAt을 ISO 문자열로 변환
+            String createdAtStr = user.getCreatedAt() != null 
+                    ? user.getCreatedAt().toString() : null;
+
             return new ProfileSection(
                     user.getNickname(),
+                    user.getEmail(),
+                    user.getBirthYear(),
+                    createdAtStr,
+                    annualIncomeManwon,
+                    existingLoanManwon,
                     title,
                     DEFAULT_STATUS_MESSAGE,
                     currentLevel,
