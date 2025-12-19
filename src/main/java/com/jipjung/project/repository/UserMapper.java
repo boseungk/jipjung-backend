@@ -76,7 +76,7 @@ public interface UserMapper {
     /**
      * 경험치 추가
      */
-    @Update("UPDATE `user` SET current_exp = current_exp + #{expToAdd} WHERE user_id = #{userId}")
+    @Update("UPDATE `user` SET current_exp = COALESCE(current_exp, 0) + #{expToAdd} WHERE user_id = #{userId}")
     int addExp(@Param("userId") Long userId, @Param("expToAdd") int expToAdd);
 
     /**
