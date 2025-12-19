@@ -10,7 +10,8 @@
         <id property="savingsId" column="savings_id"/>
         <result property="dreamHomeId" column="dream_home_id"/>
         <result property="amount" column="amount"/>
-        <result property="saveType" column="save_type" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="saveType" column="save_type" javaType="com.jipjung.project.domain.SaveType"
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
         <result property="memo" column="memo"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>

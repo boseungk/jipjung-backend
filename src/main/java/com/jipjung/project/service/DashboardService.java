@@ -25,8 +25,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -370,12 +368,12 @@ public class DashboardService {
         TimeWindow window = TimeWindow.from(today);
 
         long windowStartBalance = defaultIfNull(
-                savingsHistoryMapper.sumBeforeDate(dreamHomeId, window.windowStartUtc()),
+                savingsHistoryMapper.sumBeforeDate(dreamHomeId, window.windowStartDateTime()),
                 0L
         );
 
         List<SavingsHistory> transactions = defaultIfNull(
-                savingsHistoryMapper.findByDreamHomeIdAndDateRange(dreamHomeId, window.windowStartUtc(), window.windowEndUtc()),
+                savingsHistoryMapper.findByDreamHomeIdAndDateRange(dreamHomeId, window.windowStartDateTime(), window.windowEndDateTime()),
                 List.of()
         );
 
@@ -403,21 +401,19 @@ public class DashboardService {
         return result;
     }
 
-    private LocalDate toKstDate(LocalDateTime createdAtUtc) {
-        return createdAtUtc
-                .atZone(ZoneOffset.UTC)
-                .withZoneSameInstant(ZONE_KST)
-                .toLocalDate();
+    private LocalDate toKstDate(LocalDateTime createdAt) {
+        if (createdAt == null) {
+            return null;
+        }
+        return createdAt.toLocalDate();
     }
 
-    private static LocalDateTime startOfDayUtc(LocalDate date) {
-        ZonedDateTime kstStart = date.atStartOfDay(ZONE_KST);
-        return kstStart.withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+    private static LocalDateTime startOfDayKst(LocalDate date) {
+        return date.atStartOfDay();
     }
 
-    private static LocalDateTime endOfDayUtc(LocalDate date) {
-        ZonedDateTime kstEnd = date.plusDays(1).atStartOfDay(ZONE_KST).minusNanos(1);
-        return kstEnd.withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+    private static LocalDateTime endOfDayKst(LocalDate date) {
+        return date.plusDays(1).atStartOfDay().minusNanos(1);
     }
 
     private Map<LocalDate, Long> aggregateDailyNet(List<SavingsHistory> transactions) {
@@ -451,10 +447,10 @@ public class DashboardService {
 
     private record ResolvedLevel(int level, GrowthLevel growthLevel) {}
 
-    private record TimeWindow(LocalDate windowStart, LocalDate windowEnd, LocalDateTime windowStartUtc, LocalDateTime windowEndUtc) {
+    private record TimeWindow(LocalDate windowStart, LocalDate windowEnd, LocalDateTime windowStartDateTime, LocalDateTime windowEndDateTime) {
         private static TimeWindow from(LocalDate todayKst) {
             LocalDate start = todayKst.minusDays(CHART_WINDOW_DAYS - 1);
-            return new TimeWindow(start, todayKst, startOfDayUtc(start), endOfDayUtc(todayKst));
+            return new TimeWindow(start, todayKst, startOfDayKst(start), endOfDayKst(todayKst));
         }
     }
 }
