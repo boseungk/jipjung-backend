@@ -11,7 +11,7 @@
         <result property="dreamHomeId" column="dream_home_id"/>
         <result property="amount" column="amount"/>
         <result property="saveType" column="save_type" javaType="com.jipjung.project.domain.SaveType"
-                typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+                typeHandler="com.jipjung.project.global.mybatis.SaveTypeTypeHandler"/>
         <result property="memo" column="memo"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>

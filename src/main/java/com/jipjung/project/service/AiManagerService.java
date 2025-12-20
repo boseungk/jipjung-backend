@@ -66,9 +66,9 @@ public class AiManagerService {
     private final GrowthLevelMapper growthLevelMapper;
     private final StreakService streakService;
 
-    // 경험치 상수
-    private static final int EXP_REASONABLE = 50;
-    private static final int EXP_WASTE = -30;
+    // 경험치 상수 (프론트엔드 constants/exp.js와 동기화 필요)
+    private static final int EXP_REASONABLE = 20;  // 합리적 소비: +20 EXP (20만원 상당)
+    private static final int EXP_WASTE = -10;       // 낭비: -10 EXP (10만원 페널티)
     private static final String RESULT_REASONABLE = "REASONABLE";
 
     // 지원하는 이미지 MIME 타입
@@ -180,9 +180,14 @@ public class AiManagerService {
         );
         aiConversationMapper.updateJudgment(conversation);
 
-        // 5. 경험치 반영
+        // 5. 경험치 반영 (음수 EXP는 0 이하로 내려가지 않도록 클램프)
         int previousExp = safeCurrentExp(user);
-        userMapper.addExp(userId, expChange);
+        int safeExpChange = expChange;
+        if (expChange < 0) {
+            // 현재 EXP보다 더 많이 빼지 않도록 제한
+            safeExpChange = Math.max(expChange, -previousExp);
+        }
+        userMapper.addExp(userId, safeExpChange);
         User updatedUser = findUserOrThrow(userId);
         int updatedExp = safeCurrentExp(updatedUser);
 
@@ -191,8 +196,8 @@ public class AiManagerService {
         GrowthLevel levelInfo = growthLevelMapper.findByLevel(currentLevel);
         boolean isLevelUp = isLevelUp(previousExp, updatedExp, levelInfo);
 
-        log.info("AI judgment completed. userId: {}, conversationId: {}, result: {}, expChange: {}, excuse: {}",
-                userId, conversation.getConversationId(), aiOutput.result(), expChange, request.selectedExcuseId());
+        log.info("AI judgment completed. userId: {}, conversationId: {}, result: {}, expChange: {} (actual: {}), excuse: {}",
+                userId, conversation.getConversationId(), aiOutput.result(), expChange, safeExpChange, request.selectedExcuseId());
 
         // 7. 스트릭 참여 (AI 판결 활동)
         try {
@@ -201,7 +206,8 @@ public class AiManagerService {
             log.warn("AI judgment streak participation failed for userId: {}", userId, e);
         }
 
-        return JudgmentResponse.from(aiOutput, updatedUser, levelInfo, expChange, isLevelUp);
+        // 응답에 실제 적용된 값 사용 (UI와 일치하도록)
+        return JudgmentResponse.from(aiOutput, updatedUser, levelInfo, safeExpChange, isLevelUp);
     }
 
     /**

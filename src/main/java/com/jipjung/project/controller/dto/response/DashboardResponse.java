@@ -137,7 +137,8 @@ public record DashboardResponse(
     @Schema(description = "목표 섹션")
     public record GoalSection(
             @Schema(description = "드림홈 ID") Long dreamHomeId,
-            @Schema(description = "목표 아파트명") String targetPropertyName,
+            @Schema(description = "목표 아파트명 (houseName 우선, 없으면 아파트명)") String targetPropertyName,
+            @Schema(description = "사용자 정의 집 이름 (nullable)") String houseName,
             @Schema(description = "목표 금액") long totalAmount,
             @Schema(description = "저축 금액") long savedAmount,
             @Schema(description = "남은 금액") long remainingAmount,
@@ -148,19 +149,24 @@ public record DashboardResponse(
 
         public static GoalSection from(DreamHome dreamHome) {
             if (dreamHome == null) {
-                return new GoalSection(null, NO_GOAL_MESSAGE, 0, 0, 0, 0.0, false);
+                return new GoalSection(null, NO_GOAL_MESSAGE, null, 0, 0, 0, 0.0, false);
             }
 
             String aptName = dreamHome.getApartment() != null
                     ? dreamHome.getApartment().getAptNm()
                     : NO_GOAL_MESSAGE;
+            
+            // houseName이 있으면 그것을 사용, 없으면 aptName
+            String houseName = dreamHome.getHouseName();
+            String displayName = (houseName != null && !houseName.isBlank()) ? houseName : aptName;
 
             long targetAmount = dreamHome.getTargetAmount() != null ? dreamHome.getTargetAmount() : 0;
             long savedAmount = dreamHome.getCurrentSavedAmount() != null ? dreamHome.getCurrentSavedAmount() : 0;
 
             return new GoalSection(
                     dreamHome.getDreamHomeId(),
-                    aptName,
+                    displayName,
+                    houseName,
                     targetAmount,
                     savedAmount,
                     dreamHome.getRemainingAmount(),
@@ -459,7 +465,11 @@ public record DashboardResponse(
             @Schema(description = "선택된 테마 ID") Integer themeId,
             @Schema(description = "선택된 테마 코드") String themeCode,
             @Schema(description = "선택된 테마 이름") String themeName,
-            @Schema(description = "이미지 URL") String imageUrl
+            @Schema(description = "이미지 URL") String imageUrl,
+            // Phase 2: 인테리어 진행 상태
+            @Schema(description = "현재 트랙 (house/furniture)") String buildTrack,
+            @Schema(description = "인테리어 단계 (0-5)") int furnitureStage,
+            @Schema(description = "인테리어 단계 내 EXP") int furnitureExp
     ) {
         private static final String DEFAULT_STEP_TITLE = "터파기";
         private static final String DEFAULT_STEP_DESCRIPTION = "기초 공사를 시작합니다";
@@ -481,6 +491,11 @@ public record DashboardResponse(
             // HouseTheme.getFullImageUrl()가 CDN URL 또는 폴백 경로 반환
             String imageUrl = houseTheme != null ? houseTheme.getFullImageUrl() : "/" + HouseTheme.DEFAULT_IMAGE_PATH;
 
+            // 인테리어 진행 상태
+            String buildTrack = user.getBuildTrack() != null ? user.getBuildTrack() : "house";
+            int furnitureStage = user.getFurnitureStage() != null ? user.getFurnitureStage() : 0;
+            int furnitureExp = user.getFurnitureExp() != null ? user.getFurnitureExp() : 0;
+
             return new ShowroomSection(
                     currentStep,
                     steps,
@@ -489,7 +504,10 @@ public record DashboardResponse(
                     themeId,
                     themeCode,
                     themeName,
-                    imageUrl
+                    imageUrl,
+                    buildTrack,
+                    furnitureStage,
+                    furnitureExp
             );
         }
     }
