@@ -69,4 +69,36 @@ public interface ApartmentMapper {
           AND a.longitude IS NOT NULL
         """)
     RegionCoordinatesResponse findAverageCoordinatesByRegion(@Param("regionName") String regionName);
+
+    /**
+     * 좌표가 없는 아파트 조회 (배치 지오코딩용)
+     */
+    List<Apartment> findMissingCoordinates(@Param("limit") int limit);
+
+    /**
+     * 아파트 정보 Upsert (있으면 업데이트, 없으면 삽입)
+     * MOLIT API 동기화에 사용
+     *
+     * @param apartment 아파트 정보
+     * @return 영향받은 행 수
+     */
+    int upsert(Apartment apartment);
+
+    /**
+     * 아파트 정보 삽입
+     *
+     * @param apartment 아파트 정보
+     * @return 영향받은 행 수
+     */
+    int insert(Apartment apartment);
+
+    /**
+     * 아파트 좌표 및 법정동 코드 업데이트
+     */
+    int updateLocation(
+            @Param("aptSeq") String aptSeq,
+            @Param("dongCode") String dongCode,
+            @Param("latitude") java.math.BigDecimal latitude,
+            @Param("longitude") java.math.BigDecimal longitude
+    );
 }

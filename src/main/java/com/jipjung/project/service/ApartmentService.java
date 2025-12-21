@@ -13,34 +13,113 @@ import com.jipjung.project.controller.dto.response.RegionCoordinatesResponse;
 import com.jipjung.project.domain.Apartment;
 import com.jipjung.project.domain.FavoriteApartment;
 import com.jipjung.project.repository.ApartmentMapper;
+import com.jipjung.project.repository.DongcodeMapper;
 import com.jipjung.project.repository.FavoriteApartmentMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ApartmentService {
 
     private final ApartmentMapper apartmentMapper;
     private final FavoriteApartmentMapper favoriteApartmentMapper;
+    private final DongcodeMapper dongcodeMapper;
+    private final ApartmentWarmupService apartmentWarmupService;
 
     /**
      * 아파트 목록 조회 (검색 및 페이징)
      * 각 아파트의 최신 실거래 1건 포함
+     * 
+     * Fallback: lawdCd 있고 DB 결과 없을 시 비동기 워밍 트리거
      */
     @Transactional(readOnly = true)
     public ApartmentListPageResponse searchApartments(ApartmentSearchRequest request) {
-        List<Apartment> apartments = apartmentMapper.findAllWithLatestDeal(request);
-        int totalCount = apartmentMapper.count(request);
+        ApartmentSearchRequest resolvedRequest = resolveSearchRequest(request);
+        List<Apartment> apartments = apartmentMapper.findAllWithLatestDeal(resolvedRequest);
+        int totalCount = apartmentMapper.count(resolvedRequest);
+
+        // Fallback: lawdCd 있고 결과 없을 때 API 호출
+        if (apartments.isEmpty() && resolvedRequest.lawdCd() != null && !resolvedRequest.lawdCd().isBlank()) {
+            String dealYmd = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+            apartmentWarmupService.warmupIfMissing(resolvedRequest.lawdCd(), dealYmd);
+        }
 
         List<ApartmentListResponse> responses = apartments.stream()
                 .map(apt -> ApartmentListResponse.from(apt, apt.getLatestDeal()))
                 .toList();
 
         return ApartmentListPageResponse.of(responses, totalCount, request.page(), request.size());
+    }
+
+    private ApartmentSearchRequest resolveSearchRequest(ApartmentSearchRequest request) {
+        String resolvedLawdCd = resolveLawdCd(request);
+        if (resolvedLawdCd == null || resolvedLawdCd.equals(request.lawdCd())) {
+            return request;
+        }
+        return request.withLawdCd(resolvedLawdCd);
+    }
+
+    private String resolveLawdCd(ApartmentSearchRequest request) {
+        String lawdCd = normalizeToNull(request.lawdCd());
+        if (lawdCd != null) {
+            return lawdCd;
+        }
+
+        String sigungu = normalizeToNull(request.sigungu());
+        if (sigungu == null) {
+            return null;
+        }
+
+        String sido = normalizeToNull(request.sido());
+        String normalizedSido = normalizeSidoName(sido);
+        String resolved = normalizedSido != null
+                ? dongcodeMapper.findLawdCdByRegion(normalizedSido, sigungu)
+                : null;
+
+        if (resolved == null && sido != null && !sido.equals(normalizedSido)) {
+            resolved = dongcodeMapper.findLawdCdByRegion(sido, sigungu);
+        }
+
+        if (resolved == null && sido == null) {
+            resolved = dongcodeMapper.findLawdCdBySigungu(sigungu);
+        }
+
+        if (resolved == null) {
+            log.warn("[Search] lawdCd 해석 실패: sido={}, sigungu={}", sido, sigungu);
+        }
+
+        return resolved;
+    }
+
+    private String normalizeSidoName(String sido) {
+        if (sido == null) {
+            return null;
+        }
+        String trimmed = sido.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return switch (trimmed) {
+            case "강원특별자치도" -> "강원도";
+            case "전북특별자치도" -> "전라북도";
+            default -> trimmed;
+        };
+    }
+
+    private String normalizeToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**

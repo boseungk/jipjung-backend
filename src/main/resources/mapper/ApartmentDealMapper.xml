@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jipjung.project.repository.ApartmentDealMapper">
+
+    <!-- 거래 내역 삽입 -->
+    <insert id="insert" parameterType="com.jipjung.project.domain.ApartmentDeal" useGeneratedKeys="true" keyProperty="dealNo">
+        INSERT IGNORE INTO apartment_deal (
+            apt_seq, apt_dong, floor,
+            deal_year, deal_month, deal_day,
+            exclu_use_ar, deal_amount
+        ) VALUES (
+            #{aptSeq}, #{aptDong}, #{floor},
+            #{dealYear}, #{dealMonth}, #{dealDay},
+            #{excluUseAr}, #{dealAmount}
+        )
+    </insert>
+
+</mapper>
