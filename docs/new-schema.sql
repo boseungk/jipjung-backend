@@ -177,6 +177,7 @@ CREATE TABLE dream_home (
                             dream_home_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                             user_id BIGINT NOT NULL,
                             apt_seq VARCHAR(20) NOT NULL,
+                            house_name VARCHAR(100) COMMENT '유저가 붙인 집 이름',
 
                             target_amount BIGINT NOT NULL,
                             target_date DATE NOT NULL,
