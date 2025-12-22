@@ -169,24 +169,25 @@ public class AiManagerService {
         boolean isReasonable = isReasonableResult(aiOutput.result());
         int expChange = calculateExpChange(isReasonable);
 
-        // 4. 판결 결과 저장 (JUDGED)
-        conversation.updateJudgment(
-                request.selectedExcuseId(),
-                request.customExcuse(),
-                aiOutput.result(),
-                aiOutput.score(),
-                expChange,
-                serializeToJson(aiOutput)
-        );
-        aiConversationMapper.updateJudgment(conversation);
-
-        // 5. 경험치 반영 (음수 EXP는 0 이하로 내려가지 않도록 클램프)
+        // 4. 경험치 반영 (음수 EXP는 0 이하로 내려가지 않도록 클램프)
         int previousExp = safeCurrentExp(user);
         int safeExpChange = expChange;
         if (expChange < 0) {
             // 현재 EXP보다 더 많이 빼지 않도록 제한
             safeExpChange = Math.max(expChange, -previousExp);
         }
+
+        // 5. 판결 결과 저장 (JUDGED) - 실제 반영된 EXP 기준
+        conversation.updateJudgment(
+                request.selectedExcuseId(),
+                request.customExcuse(),
+                aiOutput.result(),
+                aiOutput.score(),
+                safeExpChange,
+                serializeToJson(aiOutput)
+        );
+        aiConversationMapper.updateJudgment(conversation);
+
         userMapper.addExp(userId, safeExpChange);
         User updatedUser = findUserOrThrow(userId);
         int updatedExp = safeCurrentExp(updatedUser);
