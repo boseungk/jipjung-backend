@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 /**
  * 드림홈 서비스
@@ -33,36 +34,59 @@ public class DreamHomeService {
     private final UserMapper userMapper;
     private final GrowthLevelMapper growthLevelMapper;
     private final HouseThemeMapper houseThemeMapper;
-    private final DsrService dsrService;
     private final StreakService streakService;
     private final CollectionService collectionService;
 
-    // 1만원당 1 EXP (10만원당 10 EXP와 동일 비율이지만, 10만원 미만 저축에도 EXP가 반영되도록 단위를 세분화)
-    private static final long EXP_PER_UNIT = 10_000L;
-    private static final int EXP_AMOUNT = 1;
-    private static final int MAX_EXP_PER_SAVINGS = 500;
+    // EXP 정책은 ExpPolicy로 통합 관리합니다.
 
     // =========================================================================
     // Public API Methods
     // =========================================================================
 
+    /**
+     * 드림홈 설정 (V2)
+     * <p>
+     * V2 리팩토링: 저축 목표와 매물 참조를 분리하여 처리
+     * <ul>
+     *   <li>신규 생성: targetAmount 필수, aptSeq 선택</li>
+     *   <li>기존 업데이트: aptSeq 변경은 자유, targetAmount 변경은 저축 진행 전에만 허용</li>
+     * </ul>
+     *
+     * @param userId  사용자 ID
+     * @param request 드림홈 설정 요청
+     * @return 설정된 드림홈 정보
+     */
     @Transactional
     public DreamHomeSetResponse setDreamHome(Long userId, DreamHomeSetRequest request) {
-        Apartment apartment = findApartmentOrThrow(request.aptSeq());
-        Long latestDealPrice = resolveLatestDealPrice(apartment);
-        long targetAmount = resolveValidatedTargetAmount(userId, request, latestDealPrice);
-        DreamHome existingDreamHome = dreamHomeMapper.findActiveByUserId(userId);
+        // 1. 매물 조회 (선택 - V2에서 nullable 허용)
+        String normalizedAptSeq = request.normalizedAptSeq();
+        Apartment apartment = normalizedAptSeq != null
+                ? findApartmentOrThrow(normalizedAptSeq)
+                : null;
 
-        // 테마 선택 시 검증 및 저장
-        if (request.themeId() != null) {
-            validateAndSaveTheme(userId, request.themeId());
+        // 2. 테마 검증 및 저장
+        if (request.getThemeId() != null) {
+            validateAndSaveTheme(userId, request.getThemeId());
         }
 
-        DreamHome dreamHome = (existingDreamHome != null)
-                ? updateExistingDreamHome(existingDreamHome, request, targetAmount)
-                : createNewDreamHome(userId, request, targetAmount);
+        // 3. 기존 활성 드림홈 조회
+        DreamHome existingDreamHome = dreamHomeMapper.findActiveByUserId(userId);
 
-        return DreamHomeSetResponse.from(dreamHome, apartment, latestDealPrice);
+        // 4. 신규 생성 vs 기존 업데이트 분기
+        DreamHome dreamHome;
+        if (existingDreamHome != null) {
+            dreamHome = updateExistingDreamHomeV2(existingDreamHome, request);
+        } else {
+            dreamHome = createNewDreamHome(userId, request, request.getTargetAmount());
+        }
+
+        Apartment responseApartment = apartment;
+        if (responseApartment == null && dreamHome.getAptSeq() != null) {
+            responseApartment = findApartmentOrThrow(dreamHome.getAptSeq());
+        }
+        Long latestDealPrice = resolveLatestDealPrice(responseApartment);
+
+        return DreamHomeSetResponse.from(dreamHome, responseApartment, latestDealPrice);
     }
 
     @Transactional
@@ -70,8 +94,9 @@ public class DreamHomeService {
         DreamHome dreamHome = findActiveDreamHomeOrThrow(userId);
 
         saveSavingsHistory(dreamHome.getDreamHomeId(), request);
+        long previousSavedAmount = nullToZero(dreamHome.getCurrentSavedAmount());
         long newSavedAmount = updateSavedAmount(dreamHome, request);
-        boolean isCompleted = checkAndUpdateCompletion(dreamHome, newSavedAmount, userId);
+        CompletionResult completionResult = checkAndUpdateCompletion(dreamHome, previousSavedAmount, newSavedAmount, userId);
 
         ExpLevelResult expResult = processExpAndLevel(userId, request);
 
@@ -81,7 +106,7 @@ public class DreamHomeService {
             streakResult = streakService.participate(userId, ActivityType.SAVINGS);
         }
 
-        return buildSavingsResponse(dreamHome, newSavedAmount, isCompleted, expResult, streakResult);
+        return buildSavingsResponse(dreamHome, newSavedAmount, completionResult, expResult, streakResult);
     }
 
     // =========================================================================
@@ -101,83 +126,114 @@ public class DreamHomeService {
         return dreamHome;
     }
 
-    private DreamHome updateExistingDreamHome(DreamHome existing, DreamHomeSetRequest request, long targetAmount) {
-        DreamHome updated = buildDreamHome(
-                existing.getDreamHomeId(),
-                existing.getUserId(),
-                request,
-                targetAmount,
-                nullToZero(existing.getCurrentSavedAmount())
-        );
-        dreamHomeMapper.updateDreamHome(updated);
-        log.info("Dream home updated. dreamHomeId: {}, aptSeq: {}", updated.getDreamHomeId(), request.aptSeq());
-        return updated;
+    /**
+     * V2: 기존 드림홈 부분 업데이트
+     * <p>
+     * 저축 목표와 매물 참조를 독립적으로 처리:
+     * <ul>
+     *   <li>aptSeq 변경: apt_seq만 업데이트 (저축 진행 상태에 영향 없음)</li>
+     *   <li>targetAmount 변경: 저축 진행 중에는 증가만 허용</li>
+     * </ul>
+     *
+     * @param existing  기존 드림홈
+     * @param request   업데이트 요청
+     * @return 업데이트된 드림홈
+     */
+    private DreamHome updateExistingDreamHomeV2(
+            DreamHome existing,
+            DreamHomeSetRequest request
+    ) {
+        Long dreamHomeId = existing.getDreamHomeId();
+        // 1. aptSeq 변경 처리 (저축 목표에 영향 없음)
+        if (request.hasAptSeqField()) {
+            String newAptSeq = request.normalizedAptSeq();
+            if (!Objects.equals(existing.getAptSeq(), newAptSeq)) {
+                dreamHomeMapper.updateAptSeq(dreamHomeId, newAptSeq);
+                log.info("Property reference updated. dreamHomeId: {}, {} -> {}",
+                        dreamHomeId, existing.getAptSeq(), newAptSeq);
+            }
+        }
+
+        // 2. targetAmount 변경 처리 (저축 진행 중 제한)
+        Long newTarget = request.getTargetAmount();
+        if (!newTarget.equals(existing.getTargetAmount())) {
+            validateTargetAmountChange(existing, newTarget);
+            dreamHomeMapper.updateTargetAmount(dreamHomeId, newTarget);
+            log.info("Target amount updated. dreamHomeId: {}, {} -> {}",
+                    dreamHomeId, existing.getTargetAmount(), newTarget);
+        }
+
+        // 3. 기타 필드 업데이트 (targetDate, monthlyGoal, houseName)
+        if (hasOtherFieldChanges(existing, request)) {
+            dreamHomeMapper.updateDreamHomeDetails(
+                    dreamHomeId,
+                    request.getTargetDate(),
+                    request.getMonthlyGoal(),
+                    request.getHouseName()
+            );
+        }
+
+        // 변경된 정보 반영하여 반환
+        return dreamHomeMapper.findById(dreamHomeId);
+    }
+
+    /**
+     * 저축 목표 변경 검증
+     * <p>
+     * V2 정책: 저축 진행 중(currentSavedAmount > 0)에는 목표 변경 불가
+     *
+     * @param existing  기존 드림홈
+     * @param newTarget 새 목표 금액
+     * @throws BusinessException 저축 진행 중이거나 목표가 저축액보다 작은 경우
+     */
+    private void validateTargetAmountChange(DreamHome existing, Long newTarget) {
+        long currentSaved = nullToZero(existing.getCurrentSavedAmount());
+        long currentTarget = nullToZero(existing.getTargetAmount());
+
+        if (currentSaved > 0 && newTarget < currentTarget) {
+            throw new BusinessException(ErrorCode.TARGET_CHANGE_NOT_ALLOWED,
+                    "저축 진행 중에는 목표를 줄일 수 없습니다. 현재 목표: " + currentTarget);
+        }
+
+        if (newTarget < currentSaved) {
+            throw new BusinessException(ErrorCode.TARGET_LESS_THAN_SAVED,
+                    "저축 목표는 현재 저축액(" + currentSaved + ")보다 작을 수 없습니다.");
+        }
+    }
+
+    /**
+     * targetDate, monthlyGoal, houseName 변경 여부 확인
+     */
+    private boolean hasOtherFieldChanges(DreamHome existing, DreamHomeSetRequest request) {
+        return !Objects.equals(existing.getTargetDate(), request.getTargetDate())
+                || !Objects.equals(existing.getMonthlyGoal(), request.getMonthlyGoal())
+                || !Objects.equals(existing.getHouseName(), request.getHouseName());
     }
 
     private DreamHome createNewDreamHome(Long userId, DreamHomeSetRequest request, long targetAmount) {
-        DreamHome newDreamHome = buildDreamHome(null, userId, request, targetAmount, 0L);
+        DreamHome newDreamHome = buildNewDreamHome(userId, request, targetAmount);
         dreamHomeMapper.insert(newDreamHome);
-        log.info("Dream home created. dreamHomeId: {}, aptSeq: {}", newDreamHome.getDreamHomeId(), request.aptSeq());
+        log.info("Dream home created. dreamHomeId: {}, aptSeq: {}", newDreamHome.getDreamHomeId(), request.getAptSeq());
         return newDreamHome;
     }
 
-    private DreamHome buildDreamHome(
-            Long dreamHomeId,
-            Long userId,
-            DreamHomeSetRequest request,
-            Long targetAmount,
-            Long savedAmount
-    ) {
+    private DreamHome buildNewDreamHome(Long userId, DreamHomeSetRequest request, Long targetAmount) {
         return DreamHome.builder()
-                .dreamHomeId(dreamHomeId)
                 .userId(userId)
-                .aptSeq(request.aptSeq())
+                .aptSeq(request.normalizedAptSeq())
                 .targetAmount(targetAmount)
-                .targetDate(request.targetDate())
-                .monthlyGoal(request.monthlyGoal())
-                .currentSavedAmount(savedAmount)
+                .targetDate(request.getTargetDate())
+                .monthlyGoal(request.getMonthlyGoal())
+                .currentSavedAmount(0L)
                 .startDate(LocalDate.now())
                 .status(DreamHomeStatus.ACTIVE)
-                .houseName(request.houseName())
+                .houseName(request.getHouseName())
                 .build();
     }
 
     // =========================================================================
     // Target Validation (DSR)
     // =========================================================================
-
-    /**
-     * DSR 기반 목표 금액 검증 및 보정
-     * <p>
-     * 최신 실거래가와 LITE DSR 한도를 기준으로 최소 필요 자기자본을 계산합니다.
-     * - 실거래가가 없으면 요청값을 그대로 사용
-     * - 요청 금액이 부족하면 필요한 금액으로 보정
-     */
-    private long resolveValidatedTargetAmount(Long userId, DreamHomeSetRequest request, Long latestDealPrice) {
-        long requestedTarget = nullToZero(request.targetAmount());
-
-        if (latestDealPrice == null) {
-            log.info("No deal price found for aptSeq {}. Using requested targetAmount {} as-is.", request.aptSeq(), requestedTarget);
-            return requestedTarget;
-        }
-
-        User user = userMapper.findById(userId);
-        if (user == null) {
-            throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        DsrService.LiteDsrSnapshot dsrSnapshot = dsrService.calculateLiteDsrSnapshot(user);
-        long maxLoanAmount = dsrSnapshot.result().maxLoanAmount();
-        long requiredCapital = Math.max(0, latestDealPrice - maxLoanAmount);
-        long resolved = Math.max(requestedTarget, requiredCapital);
-
-        if (resolved != requestedTarget) {
-            log.info("Target amount adjusted by DSR. userId: {}, aptSeq: {}, requested: {}, required: {}, resolved: {}",
-                    userId, request.aptSeq(), requestedTarget, requiredCapital, resolved);
-        }
-
-        return resolved;
-    }
 
     // =========================================================================
     // Theme Operations
@@ -239,18 +295,28 @@ public class DreamHomeService {
         return saveType == SaveType.DEPOSIT ? amount : -amount;
     }
 
-    private boolean checkAndUpdateCompletion(DreamHome dreamHome, long newSavedAmount, Long userId) {
+    private CompletionResult checkAndUpdateCompletion(
+            DreamHome dreamHome,
+            long previousSavedAmount,
+            long newSavedAmount,
+            Long userId
+    ) {
         long targetAmount = nullToZero(dreamHome.getTargetAmount());
         boolean isCompleted = newSavedAmount >= targetAmount;
+        boolean wasCompleted = previousSavedAmount >= targetAmount;
+        boolean justCompleted = !wasCompleted && isCompleted;
+        Long completedCollectionId = null;
 
         if (isCompleted) {
             dreamHomeMapper.updateStatus(dreamHome.getDreamHomeId(), DreamHomeStatus.COMPLETED);
             log.info("Dream home completed! userId: {}, dreamHomeId: {}", userId, dreamHome.getDreamHomeId());
 
             // 컬렉션 자동 등록 (멱등성 보장)
-            collectionService.registerOnCompletion(userId, dreamHome, newSavedAmount);
+            if (justCompleted) {
+                completedCollectionId = collectionService.registerOnCompletion(userId, dreamHome, newSavedAmount);
+            }
         }
-        return isCompleted;
+        return new CompletionResult(isCompleted, justCompleted, completedCollectionId);
     }
 
     // =========================================================================
@@ -295,9 +361,7 @@ public class DreamHomeService {
         if (saveType == SaveType.WITHDRAW) {
             return 0;
         }
-        int units = (int) (amount / EXP_PER_UNIT);
-        int exp = units * EXP_AMOUNT;
-        return Math.min(exp, MAX_EXP_PER_SAVINGS);
+        return ExpPolicy.calculateSavingsExp(amount);
     }
 
     // =========================================================================
@@ -307,7 +371,7 @@ public class DreamHomeService {
     private SavingsRecordResponse buildSavingsResponse(
             DreamHome dreamHome,
             long newSavedAmount,
-            boolean isCompleted,
+            CompletionResult completionResult,
             ExpLevelResult expResult,
             StreakService.StreakResult streakResult
     ) {
@@ -315,7 +379,7 @@ public class DreamHomeService {
                 .dreamHomeId(dreamHome.getDreamHomeId())
                 .currentSavedAmount(newSavedAmount)
                 .targetAmount(dreamHome.getTargetAmount())
-                .status(isCompleted ? DreamHomeStatus.COMPLETED : DreamHomeStatus.ACTIVE)
+                .status(completionResult.isCompleted() ? DreamHomeStatus.COMPLETED : DreamHomeStatus.ACTIVE)
                 .build();
 
         // 스트릭 정보 변환 (오늘 첫 참여 시에만 포함)
@@ -334,12 +398,15 @@ public class DreamHomeService {
                 expResult.user(),
                 expResult.growthLevel(),
                 expResult.isLevelUp(),
-                streakInfo
+                streakInfo,
+                completionResult.isCompleted(),
+                completionResult.justCompleted(),
+                completionResult.completedCollectionId()
         );
     }
 
     private Long resolveLatestDealPrice(Apartment apartment) {
-        if (apartment.getDeals() == null || apartment.getDeals().isEmpty()) {
+        if (apartment == null || apartment.getDeals() == null || apartment.getDeals().isEmpty()) {
             return null;
         }
         Long dealAmountNum = apartment.getDeals().get(0).getDealAmountNum();
@@ -363,4 +430,6 @@ public class DreamHomeService {
     // =========================================================================
 
     private record ExpLevelResult(int expChange, User user, GrowthLevel growthLevel, boolean isLevelUp) {}
+
+    private record CompletionResult(boolean isCompleted, boolean justCompleted, Long completedCollectionId) {}
 }

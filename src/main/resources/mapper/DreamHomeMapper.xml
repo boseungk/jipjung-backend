@@ -75,16 +75,12 @@
         VALUES (#{userId}, #{aptSeq}, #{targetAmount}, #{targetDate}, #{monthlyGoal}, #{currentSavedAmount}, #{startDate}, #{status}, #{houseName})
     </insert>
 
-    <!-- 드림홈 목표 업데이트 (저축액 유지) -->
-    <update id="updateDreamHome" parameterType="com.jipjung.project.domain.DreamHome">
+    <!-- 드림홈 상세 정보 업데이트 -->
+    <update id="updateDreamHomeDetails">
         UPDATE dream_home
-        SET apt_seq = #{aptSeq},
-            target_amount = #{targetAmount},
-            target_date = #{targetDate},
+        SET target_date = #{targetDate},
             monthly_goal = #{monthlyGoal},
-            start_date = #{startDate},
             house_name = #{houseName},
-            status = 'ACTIVE',
             updated_at = CURRENT_TIMESTAMP
         WHERE dream_home_id = #{dreamHomeId}
           AND is_deleted = false
@@ -103,6 +99,24 @@
     <update id="updateCurrentSavedAmount">
         UPDATE dream_home
         SET current_saved_amount = #{currentSavedAmount},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE dream_home_id = #{dreamHomeId}
+          AND is_deleted = false
+    </update>
+
+    <!-- V2: 매물 참조 업데이트 (저축 목표에 영향 없음) -->
+    <update id="updateAptSeq">
+        UPDATE dream_home
+        SET apt_seq = #{aptSeq},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE dream_home_id = #{dreamHomeId}
+          AND is_deleted = false
+    </update>
+
+    <!-- V2: 저축 목표 금액 업데이트 -->
+    <update id="updateTargetAmount">
+        UPDATE dream_home
+        SET target_amount = #{targetAmount},
             updated_at = CURRENT_TIMESTAMP
         WHERE dream_home_id = #{dreamHomeId}
           AND is_deleted = false
