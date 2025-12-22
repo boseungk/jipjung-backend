@@ -20582,3 +20582,24 @@ INSERT IGNORE INTO dongcode (dong_code, sido_name, gugun_name, dong_name) VALUES
 ('5280042026', '전북특별자치도', '부안군', '위도면 식도리'),
 ('5280042027', '전북특별자치도', '부안군', '위도면 상왕등리'),
 ('5280042028', '전북특별자치도', '부안군', '위도면 하왕등리');
+
+-- ============================================================================
+-- growth_level 데이터 (집짓기 6단계)
+-- ============================================================================
+
+INSERT IGNORE INTO growth_level (level, step_name, description, required_exp, is_deleted) VALUES
+(1, '터파기', '꿈을 위한 첫 삽을 떴어요!', 100, false),
+(2, '기초 공사', '차근차근 기초를 다지고 있어요', 300, false),
+(3, '골조', '공간이 조금씩 형태를 갖춰가요', 600, false),
+(4, '지붕', '어떤 집이 될지 기대되지 않나요?', 1000, false),
+(5, '외벽', '거의 다 왔어요! 마무리가 한창이에요', 1500, false),
+(6, '완공', '드디어 완성! 따뜻한 온기로 채워주세요', 1500, false);
+
+-- ============================================================================
+-- house_theme 데이터 (테마 3종)
+-- ============================================================================
+
+INSERT IGNORE INTO house_theme (theme_id, theme_code, theme_name, image_path, is_active, is_deleted) VALUES
+(1, 'CLASSIC', '클래식 하우스', 'classic/stage6.webp', true, false),
+(2, 'HANOK', '한옥', 'hanok/stage6.webp', true, false),
+(3, 'SANTORINI', '산토리니', 'santorini/stage6.webp', true, false);

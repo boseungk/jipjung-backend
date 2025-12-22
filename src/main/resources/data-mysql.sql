@@ -184,20 +184,20 @@ INSERT INTO apartment_deal (apt_seq, apt_dong, floor, deal_year, deal_month, dea
 
 INSERT INTO growth_level (level, step_name, description, required_exp, is_deleted) VALUES
 (1, '터파기', '꿈을 위한 첫 삽을 떴어요!', 100, false),
-(2, '기초 공사', '차근차근 기초를 다지고 있어요', 200, false),
-(3, '골조', '공간이 조금씩 형태를 갖춰가요', 300, false),
-(4, '지붕', '어떤 집이 될지 기대되지 않나요?', 400, false),
-(5, '외벽', '거의 다 왔어요! 마무리가 한창이에요', 500, false),
-(6, '완공', '드디어 완성! 따뜻한 온기로 채워주세요', 600, false);
+(2, '기초 공사', '차근차근 기초를 다지고 있어요', 300, false),
+(3, '골조', '공간이 조금씩 형태를 갖춰가요', 600, false),
+(4, '지붕', '어떤 집이 될지 기대되지 않나요?', 1000, false),
+(5, '외벽', '거의 다 왔어요! 마무리가 한창이에요', 1500, false),
+(6, '완공', '드디어 완성! 따뜻한 온기로 채워주세요', 1500, false);
 
 -- ============================================================================
 -- 5. house_theme 데이터 (테마 3종) - image_path는 상대 경로만 저장
 -- ============================================================================
 
 INSERT INTO house_theme (theme_id, theme_code, theme_name, image_path, is_active, is_deleted) VALUES
-(1, 'MODERN', '모던 하우스', 'themes/modern/phase.svg', true, false),
-(2, 'HANOK', '한옥', 'themes/hanok/phase.svg', true, false),
-(3, 'CASTLE', '캐슬', 'themes/castle/phase.svg', true, false);
+(1, 'CLASSIC', '클래식 하우스', 'classic/stage6.webp', true, false),
+(2, 'HANOK', '한옥', 'hanok/stage6.webp', true, false),
+(3, 'SANTORINI', '산토리니', 'santorini/stage6.webp', true, false);
 
 -- theme_asset 테이블 삭제됨 (단일 SVG per theme 아키텍처)
 -- 이제 house_theme.image_path 사용

@@ -163,9 +163,9 @@ INSERT INTO growth_level (level, step_name, description, required_exp, is_delete
 -- ============================================================================
 
 INSERT INTO house_theme (theme_id, theme_code, theme_name, image_path, is_active, is_deleted) VALUES
-(1, 'MODERN', '모던 하우스', 'themes/modern/phase.svg', true, false),
-(2, 'HANOK', '한옥', 'themes/hanok/phase.svg', true, false),
-(3, 'CASTLE', '캐슬', 'themes/castle/phase.svg', true, false);
+(1, 'CLASSIC', '클래식 하우스', 'classic/stage6.webp', true, false),
+(2, 'HANOK', '한옥', 'hanok/stage6.webp', true, false),
+(3, 'SANTORINI', '산토리니', 'santorini/stage6.webp', true, false);
 
 -- theme_asset 테이블 삭제됨 (단일 SVG per theme 아키텍처)
 -- 이제 house_theme.image_path 사용
