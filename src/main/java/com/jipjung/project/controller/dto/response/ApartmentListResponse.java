@@ -27,6 +27,12 @@ public record ApartmentListResponse(
         @Schema(description = "도로명", example = "연희로")
         String roadNm,
 
+        @Schema(description = "시/도", example = "서울특별시")
+        String sido,
+
+        @Schema(description = "시/군/구", example = "서대문구")
+        String sigungu,
+
         @Schema(description = "건축년도", example = "2015")
         Integer buildYear,
 
@@ -60,6 +66,8 @@ public record ApartmentListResponse(
             apartment.getAptNm(),
             apartment.getUmdNm(),
             apartment.getRoadNm(),
+            apartment.getSidoName(),
+            apartment.getSigunguName(),
             apartment.getBuildYear(),
             apartment.getLatitude(),
             apartment.getLongitude(),

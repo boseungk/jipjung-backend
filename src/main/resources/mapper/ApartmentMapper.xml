@@ -47,6 +47,8 @@
         <result property="aptNm" column="apt_nm"/>
         <result property="umdNm" column="umd_nm"/>
         <result property="roadNm" column="road_nm"/>
+        <result property="sidoName" column="sido_name"/>
+        <result property="sigunguName" column="gugun_name"/>
         <result property="buildYear" column="build_year"/>
         <result property="latitude" column="latitude"/>
         <result property="longitude" column="longitude"/>
@@ -133,6 +135,8 @@
         a.apt_nm,
         a.umd_nm,
         a.road_nm,
+        dc.sido_name,
+        dc.gugun_name,
         a.build_year,
         a.latitude,
         a.longitude,
@@ -144,6 +148,9 @@
         d.exclu_use_ar,
         d.floor
         FROM apartment a
+
+        -- dongcode 테이블 조인 (시도/구군명 조회)
+        LEFT JOIN dongcode dc ON a.dong_code = dc.dong_code
 
         -- H2에서도 동작하도록 윈도우 함수로 최신 1건만 뽑아서 조인
         LEFT JOIN (

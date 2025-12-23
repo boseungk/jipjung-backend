@@ -35,6 +35,10 @@ public class Apartment {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 조회 시 사용할 지역 정보 (dongcode 조인 결과)
+    private String sidoName;      // 시도명 (예: 서울특별시, 광주광역시)
+    private String sigunguName;   // 구군명 (예: 강남구, 서구)
+
     // 조회 시 사용할 실거래 정보 (조인 결과)
     private ApartmentDeal latestDeal;      // 최신 실거래 1건 (목록용)
     private List<ApartmentDeal> deals;     // 모든 실거래 이력 (상세용)

@@ -17,6 +17,9 @@ public record JudgmentResponse(
     @Schema(description = "성장 피드백")
     Growth growth,
 
+    @Schema(description = "목표 XP 진행 정보")
+    GoalExpProgressResponse goalExpProgress,
+
     @Schema(description = "캐릭터 반응")
     Character character
 
@@ -61,7 +64,8 @@ public record JudgmentResponse(
             User user,
             GrowthLevel levelInfo,
             int expChange,
-            boolean isLevelUp
+            boolean isLevelUp,
+            GoalExpProgressResponse goalExpProgress
     ) {
         boolean isWaste = "WASTE".equals(aiOutput.result());
         return new JudgmentResponse(
@@ -76,6 +80,7 @@ public record JudgmentResponse(
                 isLevelUp,
                 isWaste ? "공사가 지연되고 있습니다!" : null
             ),
+            goalExpProgress,
             new Character(aiOutput.mood(), aiOutput.script(), aiOutput.animation())
         );
     }
