@@ -75,6 +75,7 @@ public class StreakService {
     private final StreakHistoryMapper streakHistoryMapper;
     private final StreakMilestoneRewardMapper milestoneRewardMapper;
     private final UserMapper userMapper;
+    private final CollectionService collectionService;
     private final Clock clock;
 
     // =========================================================================
@@ -126,6 +127,10 @@ public class StreakService {
 
         log.debug("Activity recorded: userId={}, activity={}, exp=+{}, capRemaining={}",
                 userId, activityType, expResult.earnedExp(), expResult.capRemaining());
+
+        if (expResult.earnedExp() > 0) {
+            collectionService.checkAndUpdateCompletionByExp(userId);
+        }
 
         return new StreakResult(
                 streakCounts.currentStreak(),
@@ -180,6 +185,8 @@ public class StreakService {
 
         log.info("Milestone reward claimed: userId={}, milestone={}일, exp=+{}",
                 userId, milestoneDays, expReward);
+
+        collectionService.checkAndUpdateCompletionByExp(userId);
 
         return new MilestoneRewardResult(milestoneDays, expReward, isLevelUp, currentStreak);
     }

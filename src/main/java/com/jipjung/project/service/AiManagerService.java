@@ -65,6 +65,7 @@ public class AiManagerService {
     private final AiConversationMapper aiConversationMapper;
     private final GrowthLevelMapper growthLevelMapper;
     private final StreakService streakService;
+    private final CollectionService collectionService;
 
     // 경험치 상수 (프론트엔드 constants/exp.js와 동기화 필요)
     private static final int EXP_REASONABLE = 20;  // 합리적 소비: +20 EXP (20만원 상당)
@@ -206,6 +207,8 @@ public class AiManagerService {
         } catch (Exception e) {
             log.warn("AI judgment streak participation failed for userId: {}", userId, e);
         }
+
+        collectionService.checkAndUpdateCompletionByExp(userId);
 
         // 응답에 실제 적용된 값 사용 (UI와 일치하도록)
         return JudgmentResponse.from(aiOutput, updatedUser, levelInfo, safeExpChange, isLevelUp);
