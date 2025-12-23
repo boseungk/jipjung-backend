@@ -41,11 +41,13 @@ public record DashboardResponse(
             int totalSteps,
             DsrSection dsrSection,
             GapAnalysisSection gapAnalysis,
-            List<String> preferredAreas
+            List<String> preferredAreas,
+            Long latestDealPrice,
+            GoalExpProgress goalExpProgress
     ) {
         return new DashboardResponse(
                 ProfileSection.from(user, level, preferredAreas),
-                GoalSection.from(dreamHome),
+                GoalSection.from(dreamHome, latestDealPrice, goalExpProgress),
                 StreakSection.from(user, weeklyStreaks, todayParticipated),
                 dsrSection,
                 AssetsSection.from(assetsData),
@@ -153,13 +155,32 @@ public record DashboardResponse(
             @Schema(description = "남은 금액 (목표 - 저축)") long remainingAmount,
             @Schema(description = "달성률 (%)") double achievementRate,
             @Schema(description = "완료 여부") boolean isCompleted,
+            @Schema(description = "목표 XP") Integer targetExp,
+            @Schema(description = "현재 XP") Integer totalExp,
+            @Schema(description = "XP 진행률 (%)") Double expProgress,
+            @Schema(description = "현재 여정 단계 (1-11)") Integer currentPhase,
             @Schema(description = "연결된 매물 정보 (참조용, nullable)") LinkedProperty linkedProperty
     ) {
         private static final String NO_GOAL_MESSAGE = "목표를 설정해주세요";
 
-        public static GoalSection from(DreamHome dreamHome) {
+        public static GoalSection from(DreamHome dreamHome, Long latestDealPrice, GoalExpProgress goalExpProgress) {
+            GoalExpProgress safeProgress = goalExpProgress != null ? goalExpProgress : GoalExpProgress.empty();
             if (dreamHome == null) {
-                return new GoalSection(null, NO_GOAL_MESSAGE, null, 0, 0, 0, 0.0, false, null);
+                return new GoalSection(
+                        null,
+                        NO_GOAL_MESSAGE,
+                        null,
+                        0,
+                        0,
+                        0,
+                        0.0,
+                        false,
+                        safeProgress.targetExp(),
+                        safeProgress.totalExp(),
+                        safeProgress.expProgress(),
+                        safeProgress.currentPhase(),
+                        null
+                );
             }
 
             String aptName = dreamHome.getApartment() != null
@@ -173,8 +194,8 @@ public record DashboardResponse(
             long targetAmount = dreamHome.getTargetAmount() != null ? dreamHome.getTargetAmount() : 0;
             long savedAmount = dreamHome.getCurrentSavedAmount() != null ? dreamHome.getCurrentSavedAmount() : 0;
 
-            // V2: 연결된 매물 정보 추출
-            LinkedProperty linkedProperty = buildLinkedProperty(dreamHome);
+            // V2: 연결된 매물 정보 추출 (최신 거래가는 외부에서 조회)
+            LinkedProperty linkedProperty = buildLinkedProperty(dreamHome, latestDealPrice);
 
             return new GoalSection(
                     dreamHome.getDreamHomeId(),
@@ -185,27 +206,36 @@ public record DashboardResponse(
                     dreamHome.getRemainingAmount(),
                     dreamHome.getAchievementRate(),
                     dreamHome.isCompleted(),
+                    safeProgress.targetExp(),
+                    safeProgress.totalExp(),
+                    safeProgress.expProgress(),
+                    safeProgress.currentPhase(),
                     linkedProperty
             );
+        }
+
+        /**
+         * 하위 호환성을 위한 오버로드 메서드
+         */
+        public static GoalSection from(DreamHome dreamHome) {
+            return from(dreamHome, null, null);
         }
 
         /**
          * 연결된 매물 정보 추출
          * <p>
          * V2: 매물이 연결되어 있으면 Gap 정보 포함, 없으면 null
+         * @param dreamHome 드림홈 엔티티
+         * @param latestDealPrice 최신 거래가 (원 단위, nullable - DashboardService에서 조회)
          */
-        private static LinkedProperty buildLinkedProperty(DreamHome dreamHome) {
+        private static LinkedProperty buildLinkedProperty(DreamHome dreamHome, Long latestDealPrice) {
             Apartment apt = dreamHome.getApartment();
             if (apt == null) {
                 return null;
             }
 
-            // 최신 거래가 추출 (단위: 원)
-            Long price = null;
-            if (apt.getDeals() != null && !apt.getDeals().isEmpty()) {
-                Long dealAmountNum = apt.getDeals().get(0).getDealAmountNum();
-                price = dealAmountNum != null ? dealAmountNum * 10_000 : null;
-            }
+            // 최신 거래가 (외부에서 전달받음)
+            Long price = latestDealPrice;
 
             long savedAmount = dreamHome.getCurrentSavedAmount() != null
                     ? dreamHome.getCurrentSavedAmount() : 0L;
@@ -214,6 +244,18 @@ public record DashboardResponse(
             long gap = price != null ? Math.max(0, price - savedAmount) : 0L;
 
             return new LinkedProperty(apt.getAptSeq(), apt.getAptNm(), price, gap);
+        }
+    }
+
+    @Schema(description = "목표 XP 진행 정보")
+    public record GoalExpProgress(
+            @Schema(description = "목표 XP") Integer targetExp,
+            @Schema(description = "현재 XP") Integer totalExp,
+            @Schema(description = "XP 진행률 (%)") Double expProgress,
+            @Schema(description = "현재 여정 단계 (1-11)") Integer currentPhase
+    ) {
+        public static GoalExpProgress empty() {
+            return new GoalExpProgress(null, null, null, null);
         }
     }
 

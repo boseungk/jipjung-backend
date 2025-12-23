@@ -63,6 +63,7 @@ public class DashboardService {
     private final ApartmentDealMapper apartmentDealMapper;
     private final DsrService dsrService;
     private final StreakService streakService;
+    private final CollectionService collectionService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -79,6 +80,7 @@ public class DashboardService {
             ApartmentDealMapper apartmentDealMapper,
             DsrService dsrService,
             StreakService streakService,
+            CollectionService collectionService,
             ObjectMapper objectMapper
     ) {
         this(
@@ -93,6 +95,7 @@ public class DashboardService {
                 apartmentDealMapper,
                 dsrService,
                 streakService,
+                collectionService,
                 objectMapper,
                 Clock.system(ZONE_KST)
         );
@@ -110,6 +113,7 @@ public class DashboardService {
             ApartmentDealMapper apartmentDealMapper,
             DsrService dsrService,
             StreakService streakService,
+            CollectionService collectionService,
             ObjectMapper objectMapper,
             Clock clock
     ) {
@@ -124,6 +128,7 @@ public class DashboardService {
         this.apartmentDealMapper = apartmentDealMapper;
         this.dsrService = dsrService;
         this.streakService = streakService;
+        this.collectionService = collectionService;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -185,9 +190,17 @@ public class DashboardService {
         }
 
         // 12. 응답 생성
+        CollectionService.GoalProgress goalProgress = collectionService.getGoalProgress(userId, dreamHome);
         return DashboardResponse.from(
                 user, level, dreamHome, weeklyStreaks,
-                todayParticipated, assetsData, houseTheme, totalSteps, dsrSection, gapAnalysis, preferredAreas
+                todayParticipated, assetsData, houseTheme, totalSteps, dsrSection, gapAnalysis, preferredAreas,
+                resolveLatestDealPrice(dreamHome),
+                new DashboardResponse.GoalExpProgress(
+                        goalProgress.targetExp(),
+                        goalProgress.totalExp(),
+                        goalProgress.expProgress(),
+                        goalProgress.currentPhase()
+                )
         );
     }
 
@@ -249,6 +262,26 @@ public class DashboardService {
         Long latestDealAmountNum = apartmentDealMapper.findLatestDealAmountNumByAptSeq(aptSeq);
         if (latestDealAmountNum == null) {
             return fallbackTarget;
+        }
+        return latestDealAmountNum * 10_000;
+    }
+
+    /**
+     * 최신 거래가 조회 (linkedProperty용)
+     * @param dreamHome 드림홈 엔티티
+     * @return 최신 거래가 (원 단위), 없으면 null
+     */
+    private Long resolveLatestDealPrice(DreamHome dreamHome) {
+        if (dreamHome == null) {
+            return null;
+        }
+        String aptSeq = dreamHome.getAptSeq();
+        if (aptSeq == null) {
+            return null;
+        }
+        Long latestDealAmountNum = apartmentDealMapper.findLatestDealAmountNumByAptSeq(aptSeq);
+        if (latestDealAmountNum == null) {
+            return null;
         }
         return latestDealAmountNum * 10_000;
     }
