@@ -19,6 +19,9 @@ public record SavingsRecordResponse(
         @Schema(description = "성장(집 짓기) 결과")
         GrowthResult growth,
 
+        @Schema(description = "목표 XP 진행 정보")
+        GoalExpProgressResponse goalExpProgress,
+
         @Schema(description = "스트릭 정보 (오늘 첫 저축 시에만 포함)", nullable = true)
         @Nullable
         StreakInfo streakInfo
@@ -95,8 +98,18 @@ public record SavingsRecordResponse(
             GrowthLevel currentLevel,
             boolean isLevelUp
     ) {
-        return from(dreamHome, expChange, user, currentLevel, isLevelUp, null,
-                dreamHome.isCompleted(), false, null);
+        return from(
+                dreamHome,
+                expChange,
+                user,
+                currentLevel,
+                isLevelUp,
+                null,
+                dreamHome.isCompleted(),
+                false,
+                null,
+                null
+        );
     }
 
     /**
@@ -118,7 +131,8 @@ public record SavingsRecordResponse(
             StreakInfo streakInfo,
             boolean isCompleted,
             boolean justCompleted,
-            Long completedCollectionId
+            Long completedCollectionId,
+            GoalExpProgressResponse goalExpProgress
     ) {
         // 드림홈 상태
         DreamHomeStatus status = new DreamHomeStatus(
@@ -142,6 +156,6 @@ public record SavingsRecordResponse(
                 currentLevel != null ? currentLevel.getStepName() : "터파기"
         );
 
-        return new SavingsRecordResponse(status, growth, streakInfo);
+        return new SavingsRecordResponse(status, growth, goalExpProgress, streakInfo);
     }
 }

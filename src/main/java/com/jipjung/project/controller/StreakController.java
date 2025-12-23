@@ -1,9 +1,11 @@
 package com.jipjung.project.controller;
 
 import com.jipjung.project.controller.dto.request.MilestoneClaimRequest;
+import com.jipjung.project.controller.dto.response.GoalExpProgressResponse;
 import com.jipjung.project.controller.dto.response.MilestoneRewardResponse;
 import com.jipjung.project.global.response.ApiResponse;
 import com.jipjung.project.service.CustomUserDetails;
+import com.jipjung.project.service.CollectionService;
 import com.jipjung.project.service.StreakService;
 import com.jipjung.project.service.StreakService.MilestoneInfo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +35,7 @@ import java.util.List;
 public class StreakController {
 
     private final StreakService streakService;
+    private final CollectionService collectionService;
 
     /**
      * 수령 가능한 마일스톤 보상 조회
@@ -69,7 +72,10 @@ public class StreakController {
         StreakService.MilestoneRewardResult result =
                 streakService.claimMilestoneReward(userDetails.getId(), request.milestoneDays());
 
-        return ApiResponse.success(MilestoneRewardResponse.from(result));
+        CollectionService.GoalProgress goalProgress = collectionService.getGoalProgress(userDetails.getId());
+        return ApiResponse.success(
+                MilestoneRewardResponse.from(result, GoalExpProgressResponse.from(goalProgress))
+        );
     }
 
     /**

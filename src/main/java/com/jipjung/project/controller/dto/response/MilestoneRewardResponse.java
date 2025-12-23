@@ -21,6 +21,9 @@ public record MilestoneRewardResponse(
         @Schema(description = "수령 시점 연속일수", example = "8")
         int streakAtClaim,
 
+        @Schema(description = "목표 XP 진행 정보")
+        GoalExpProgressResponse goalExpProgress,
+
         @Schema(description = "축하 메시지", example = "🔥 7일 연속 저축 달성! 축하합니다!")
         String message
 ) {
@@ -35,6 +38,19 @@ public record MilestoneRewardResponse(
                 result.expReward(),
                 result.isLevelUp(),
                 result.streakAtClaim(),
+                null,
+                message
+        );
+    }
+
+    public static MilestoneRewardResponse from(StreakService.MilestoneRewardResult result, GoalExpProgressResponse goalExpProgress) {
+        String message = generateCelebrationMessage(result.milestoneDays());
+        return new MilestoneRewardResponse(
+                result.milestoneDays(),
+                result.expReward(),
+                result.isLevelUp(),
+                result.streakAtClaim(),
+                goalExpProgress,
                 message
         );
     }

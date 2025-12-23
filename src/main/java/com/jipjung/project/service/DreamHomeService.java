@@ -3,6 +3,7 @@ package com.jipjung.project.service;
 import com.jipjung.project.controller.dto.request.DreamHomeSetRequest;
 import com.jipjung.project.controller.dto.request.SavingsRecordRequest;
 import com.jipjung.project.controller.dto.response.DreamHomeSetResponse;
+import com.jipjung.project.controller.dto.response.GoalExpProgressResponse;
 import com.jipjung.project.controller.dto.response.SavingsRecordResponse;
 import com.jipjung.project.controller.dto.response.StreakInfo;
 import com.jipjung.project.domain.*;
@@ -352,6 +353,8 @@ public class DreamHomeService {
             ExpLevelResult expResult,
             StreakService.StreakResult streakResult
     ) {
+        CollectionService.GoalProgress goalProgress = collectionService.getGoalProgress(dreamHome.getUserId(), dreamHome);
+        GoalExpProgressResponse goalExpProgress = GoalExpProgressResponse.from(goalProgress);
         DreamHome updatedDreamHome = DreamHome.builder()
                 .dreamHomeId(dreamHome.getDreamHomeId())
                 .currentSavedAmount(newSavedAmount)
@@ -378,7 +381,8 @@ public class DreamHomeService {
                 streakInfo,
                 completionResult.isCompleted(),
                 completionResult.justCompleted(),
-                completionResult.completedCollectionId()
+                completionResult.completedCollectionId(),
+                goalExpProgress
         );
     }
 
