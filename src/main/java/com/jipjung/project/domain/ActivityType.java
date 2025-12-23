@@ -24,7 +24,7 @@ public enum ActivityType {
     AI_JUDGMENT("AI 판결", 20),
     
     /** 저축 기록 (첫 입금만) */
-    SAVINGS("저축", 50);
+    SAVINGS("저축", 20);
 
     private final String label;
     private final int baseExp;
@@ -34,7 +34,7 @@ public enum ActivityType {
      * <p>
      * 일일 EXP 상한 계산 시 참조용
      * 
-     * @return 모든 활동 기본 EXP 합계 (110)
+     * @return 모든 활동 기본 EXP 합계 (80)
      */
     public static int getTotalBaseExp() {
         int total = 0;
