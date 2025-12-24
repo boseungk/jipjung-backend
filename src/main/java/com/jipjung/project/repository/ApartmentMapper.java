@@ -95,7 +95,7 @@ public interface ApartmentMapper {
     /**
      * 아파트 좌표 및 법정동 코드 업데이트
      */
-    int updateLocation(
+    int updateLocationIfMissing(
             @Param("aptSeq") String aptSeq,
             @Param("dongCode") String dongCode,
             @Param("latitude") java.math.BigDecimal latitude,

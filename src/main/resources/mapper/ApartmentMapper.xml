@@ -320,7 +320,7 @@
     </insert>
 
     <!-- 좌표 및 법정동 코드 업데이트 -->
-    <update id="updateLocation">
+    <update id="updateLocationIfMissing">
         UPDATE apartment
         <set>
             <if test="dongCode != null">
@@ -335,6 +335,7 @@
             updated_at = CURRENT_TIMESTAMP
         </set>
         WHERE apt_seq = #{aptSeq}
+          AND (latitude IS NULL OR longitude IS NULL)
     </update>
 
 </mapper>
