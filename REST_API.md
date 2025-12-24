@@ -6,34 +6,29 @@
 **API 버전**: v1.0
 **Base URL**: `http://localhost:8080/api`
 **인증 방식**: JWT Bearer Token
-**총 API 개수**: 24개 (구현 완료: 11개 | 개발 계획: 13개)
-**현재 구현 단계**: Phase 2 - DSR 엔진 통합 완료 (46% 완료)
+**총 API 개수**: 29개 (구현 완료: 29개 | 미구현: 0개)
+**현재 구현 단계**: Phase 3 - AI 매니저 및 드림홈/컬렉션 통합 완료
 
 ---
 
 ## API 요약
 
-### ✅ 구현 완료 (11개)
+### ✅ 구현 완료 (29개)
 
 | 카테고리 | 개수 | 엔드포인트 | 설명 |
 |---------|------|----------|------|
-| **인증** | 2 | POST /api/auth/signup, POST /api/auth/login | 회원가입, 로그인 |
-| **아파트** | 5 | GET /api/apartments, GET /api/apartments/{aptSeq}, POST /api/apartments/favorites, GET /api/apartments/favorites, DELETE /api/apartments/favorites/{id} | 아파트 조회 및 관심 관리 |
-| **사용자** | 3 | POST /api/users/onboarding, POST /api/users/profile, GET /api/users/dashboard | 온보딩, 프로필, 대시보드 |
+| **인증** | 3 | POST /api/auth/signup, POST /api/auth/login, POST /api/auth/logout | 회원가입, 로그인, 로그아웃 |
+| **사용자** | 4 | POST /api/users/onboarding, POST /api/users/profile, DELETE /api/users/account, PUT /api/users/furniture-progress | 온보딩, 프로필, 회원탈퇴, 가구 배치 저장 |
+| **아파트** | 6 | GET /api/apartments, GET /api/apartments/{aptSeq}, POST /api/apartments/favorites, GET /api/apartments/favorites, DELETE /api/apartments/favorites/{id}, GET /api/apartments/regions/{regionName}/coordinates | 아파트 조회, 관심 관리, 지역 좌표 |
 | **DSR** | 1 | POST /api/simulation/dsr | DSR PRO 시뮬레이션 |
-
-### 🔄 미구현 (13개)
-
-| 카테고리 | 개수 | 엔드포인트 | 설명 |
-|---------|------|----------|------|
-| **인증** | 3 | POST /api/auth/logout, POST /api/auth/refresh, DELETE /api/auth/withdraw | 로그아웃, 토큰갱신, 회원탈퇴 |
-| **AI 매니저** | 3 | POST /api/ai-manager/analyze, POST /api/ai-manager/judgment, GET /api/ai-manager/history | 지출분석, 판결, 내역조회 |
+| **AI 매니저** | 4 | POST /api/ai-manager/analyze, POST /api/ai-manager/confirm, POST /api/ai-manager/judgment, GET /api/ai-manager/history | 지출 분석, 데이터 확인, 판결, 내역 조회 |
 | **드림홈** | 2 | POST /api/dream-home, POST /api/dream-home/savings | 드림홈 설정, 저축 기록 |
-| **컬렉션** | 2 | GET /api/collections, GET /api/collections/{id} | 컬렉션 목록, 상세 |
-| **아파트** | 1 | GET /api/apartments/region-avg | 지역 평균 시세 |
-| **스트릭** | 2 | POST /api/streak/participate, GET /api/streak/reward | 스트릭 참여, 보상 수령 |
+| **컬렉션** | 4 | GET /api/collections, GET /api/collections/{id}/journey, GET /api/collections/in-progress/journey, PUT /api/collections/{id}/main-display | 컬렉션 목록, 여정 조회, 대표 설정 |
+| **대시보드** | 1 | GET /api/users/dashboard | 대시보드 통합 데이터 |
+| **스트릭** | 3 | GET /api/streak/reward, POST /api/streak/reward, GET /api/streak/milestones | 마일스톤 보상 조회/수령, 상태 조회 |
+| **테마** | 1 | GET /api/themes | 하우스 테마 목록 |
 
-
+---
 
 ## 인증 설정
 
@@ -66,15 +61,9 @@ Content-Type: application/json
 }
 ```
 
-### 공통 응답 필드
-- `code` (number): HTTP 상태 코드 (200, 201, 400, 401, 404, 409, 500 등)
-- `status` (string): 상태 문자열 (OK, CREATED, BAD_REQUEST, UNAUTHORIZED, NOT_FOUND, CONFLICT, INTERNAL_SERVER_ERROR 등)
-- `message` (string): 사용자 친화적 메시지
-- `data` (object|array|null): 실제 응답 데이터 (에러 시 null)
-
 ---
 
-# 1. 인증 API (2개) ✅
+# 1. 인증 API (3개) ✅
 
 ## 1-1. POST /api/auth/signup
 **회원가입**
@@ -88,32 +77,6 @@ Content-Type: application/json
 }
 ```
 
-### 요청 필드
-| 필드 | 타입 | 필수 | 검증 | 예시 |
-|------|------|------|------|------|
-| email | string | O | @Email, @NotBlank | user@example.com |
-| password | string | O | 8자 이상, 영문+숫자+특수문자 | Test1234!@ |
-| nickname | string | O | 2-20자 | 홍길동 |
-
-### 응답 (201 Created)
-```json
-{
-  "code": 201,
-  "status": "CREATED",
-  "message": "회원가입 성공",
-  "data": {
-    "email": "user@example.com",
-    "nickname": "홍길동"
-  }
-}
-```
-
-### 에러
-- `400`: 유효성 검증 실패 (필드별 오류 메시지)
-- `409`: 중복 이메일 (DUPLICATE_EMAIL)
-
----
-
 ## 1-2. POST /api/auth/login
 **로그인**
 
@@ -125,47 +88,15 @@ Content-Type: application/json
 }
 ```
 
-### 요청 필드
-| 필드 | 타입 | 필수 | 검증 | 예시 |
-|------|------|------|------|------|
-| email | string | O | @Email, @NotBlank | user@example.com |
-| password | string | O | @NotBlank | Test1234!@ |
-
-### 응답 (200 OK)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "로그인 성공",
-  "data": {
-    "accessToken": "eyJhbGc...",
-    "refreshToken": "dGhpcy4uLi",
-    "user": {
-      "id": 1,
-      "email": "user@example.com",
-      "nickname": "건축왕",
-      "onboardingCompleted": true // 프론트에서 대시보드로 갈지, 온보딩으로 갈지 판단용
-    }
-  }
-}
-```
-
-### 주의사항
-- JWT 토큰은 응답 헤더의 `Authorization` 헤더 또는 필터에서 처리됨
-- 응답 body에는 최소 정보만 포함
-
-### 에러
-- `400`: 유효성 검증 실패
-- `401`: 이메일 또는 비밀번호 오류
+## 1-3. POST /api/auth/logout
+**로그아웃**
 
 ---
 
-## 온보딩 & 프로필 API (2개) ✅
+# 2. 사용자 API (4개) ✅
 
 ## 2-1. POST /api/users/onboarding
 **온보딩 정보 저장**
-
-사용 화면: `OnboardingView.vue`
 
 ### 요청
 ```json
@@ -174,883 +105,211 @@ Content-Type: application/json
   "annualIncome": 50000000,
   "existingLoanMonthly": 500000,
   "currentAssets": 30000000,
-  "preferredAreas": ["강남구", "서초구", "송파구"]
+  "preferredAreas": ["강남구", "서초구"]
 }
 ```
 
-### 요청 필드
-| 필드 | 타입 | 필수 | 설명 | 예시 |
-|------|------|------|------|------|
-| birthYear | number | O | 출생년도 | 1995 |
-| annualIncome | number | O | 연소득 (원 단위) | 50000000 |
-| existingLoanMonthly | number | O | 월 대출 상환액 (원 단위) | 500000 |
-| currentAssets | number | O | 현재 보유 자산 (원 단위) | 30000000 |
-| preferredAreas | array | O | 선호 지역 배열 (최대 10개, 각 50자 이내) | ["강남구", "서초구"] |
-
-### 응답 (200)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "온보딩 정보 저장 완료",
-  "data": {
-    // 1. 업데이트된 유저 핵심 정보
-    "user": {
-      "id": 1,
-      "nickname": "건축왕",
-      "onboardingCompleted": true // 이제 true가 되었음을 확인 사살
-    },
-
-    // 2. 입력한 금융 정보에 대한 '즉각적인 평가' (연출용)
-    "dsrResult": {
-      "dsrRatio": 12.0,
-      "grade": "SAFE", // SAFE, CAUTION, DANGER
-      "maxLoanAmount": 400000000
-    }
-  }
-}
-```
-
----
-
-## 2-2. Post /api/users/profile
+## 2-2. POST /api/users/profile
 **프로필 수정**
-
-사용 화면: `ProfileSettingsView.vue`
 
 ### 요청
 ```json
 {
-  "nickname": "건축왕2세", // name 대신 nickname
+  "nickname": "건축왕2세",
   "annualIncome": 60000000,
   "existingLoanMonthly": 400000
 }
 ```
 
-### 요청 필드
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| name | string | O | 사용자 이름 |
-| birthYear | number | O | 출생년도 |
-| annualIncome | number | O | 연소득 (만원 단위) |
-| existingLoanMonthly | number | O | 월 대출 상환액 (만원) |
-
-### 응답 (200)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "프로필이 수정되었습니다.",
-  "data": {
-    // 1. 수정된 당사자 정보 (확인용)
-    "user": {
-      "id": 1,
-      "email": "user@example.com",
-      "nickname": "건축왕2세",
-      "annualIncome": 60000000,
-      "existingLoanMonthly": 400000,
-      "updatedAt": "2025-12-02T15:30:00Z"
-    }
-  }
-}
-```
-
----
-
-# 3. DSR 시뮬레이션 API (1개) ✅
-
-## 3-1. POST /api/simulation/dsr
-**DSR PRO 모드 시뮬레이션**
-
-2026년 정책 기반 상세 DSR 시뮬레이션을 수행합니다.
-
-**적용 정책:**
-- 스트레스 금리: 수도권 3.0%p, 비수도권 0.75%p
-- 청년 장래소득: 20-34세 구간별 인정
-- 대출 유형별 스트레스 반영율: 변동 100%, 혼합 70%, 주기형 40%, 고정 0%
+## 2-3. DELETE /api/users/account
+**회원탈퇴**
 
 ### 요청
 ```json
 {
-  "annualIncome": 60000000,
-  "region": "SEOUL_METRO",
-  "existingAnnualDebtService": 3000000,
-  "jeonseLoanBalance": 200000000,
-  "jeonseLoanRate": 4.0,
-  "jeonseIncludedInDsr": true,
-  "targetLoanType": "PERIODIC",
-  "targetLoanRate": 4.0,
-  "maturityYears": 40,
-  "lenderType": "BANK"
+  "password": "Test1234!@"
 }
 ```
 
-### 요청 필드
-| 필드 | 타입 | 필수 | 설명 | 예시 |
-|------|------|------|------|------|
-| annualIncome | number | O | 연소득 (원) | 60000000 |
-| region | string | O | 지역 (SEOUL_METRO/ETC) | SEOUL_METRO |
-| existingAnnualDebtService | number | O | 기존 연간 원리금 상환액 (원) | 3000000 |
-| jeonseLoanBalance | number | X | 전세대출 잔액 (원) | 200000000 |
-| jeonseLoanRate | number | X | 전세대출 금리 (%) | 4.0 |
-| jeonseIncludedInDsr | boolean | X | 전세대출 DSR 포함 여부 | true |
-| targetLoanType | string | O | 대출 유형 (VARIABLE/MIXED/PERIODIC/FIXED) | PERIODIC |
-| targetLoanRate | number | O | 예상 대출 금리 (%) | 4.0 |
-| maturityYears | number | O | 대출 만기 (년, 1~50) | 40 |
-| lenderType | string | X | 금융기관 유형 (BANK/NON_BANK, 기본: BANK) | BANK |
+## 2-4. PUT /api/users/furniture-progress
+**인테리어 진행 상태 동기화**
 
-### 응답 (200)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "시뮬레이션 성공",
-  "data": {
-    "currentDsrPercent": 15.5,
-    "dsrAfterMaxLoanPercent": 39.8,
-    "userGrade": "SAFE",
-    "maxLoanAmount": 420000000,
-    "appliedPolicy": {
-      "stressDsrRate": 1.2,
-      "youthIncomeMultiplier": 1.131
-    },
-    "simulationTip": "고정금리를 선택하면 스트레스 금리 없이 더 많은 대출이 가능합니다.",
-    "gameUpdate": {
-      "reducedGap": 50000000,
-      "expGained": 500
-    }
-  }
-}
-```
-
-### 응답 필드
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| currentDsrPercent | number | 현재 DSR (%) |
-| dsrAfterMaxLoanPercent | number | 최대 대출 시 예상 DSR (%) |
-| userGrade | string | DSR 등급 (SAFE/WARNING/RESTRICTED) |
-| maxLoanAmount | number | 최대 대출 가능액 (원) |
-| appliedPolicy.stressDsrRate | number | 적용된 스트레스 가산금리 (%) |
-| appliedPolicy.youthIncomeMultiplier | number | 적용된 장래소득 인정 배율 |
-| simulationTip | string | 맞춤 시뮬레이션 팁 |
-| gameUpdate | object | 게임 갱신 정보 (목표 설정 시에만) |
-
----
-
-# 4. 대시보드 API (1개) ✅
-
-## 4-1. GET /api/users/dashboard
-**대시보드 통합 데이터 조회**
-
-사용 화면: `DashboardView.vue`
+클라이언트에서 계산된 인테리어 진행 상태를 서버에 저장합니다.
 
 ### 요청
-```
-GET /api/users/dashboard
-Authorization: Bearer {accessToken}
-```
-
-### 응답 (200)
 ```json
 {
-  "code": 200,
-  "status": "OK",
-  "message": "대시보드 데이터 조회 성공",
-  "data": {
-    // [Section 1] 좌측 상단: 프로필 카드
-    "profile": {
-      "nickname": "강보승",
-      "title": "집나무 숲지기", // 레벨 타이틀
-      "statusMessage": "목표를 향해 천천히, 꾸준히 가고 있어요", // 유저 상태 메시지 또는 레제의 한마디
-      "level": 5,
-      "levelProgress": {
-        "currentExp": 150,
-        "targetExp": 170,
-        "percent": 88.2,
-        "remainingExp": 20
-      }
-    },
-
-    // [Section 2] 우측 상단: 목표 달성률 (도넛 차트)
-    "goal": {
-      "targetPropertyName": "래미안 아파트",
-      "totalAmount": 150000000,   // 1.5억 (단위: 원)
-      "savedAmount": 150000000,   // 현재 모은 금액
-      "remainingAmount": 0,       // 남은 금액
-      "achievementRate": 100.0,   // 달성률
-      "isCompleted": true         // 100% 달성 여부 (저축하기 버튼 활성화 로직 등)
-    },
-
-    // [Section 3] 좌측 중단: 연속 저축 (스트릭)
-    "streak": {
-      "currentStreak": 7,
-      "maxStreak": 15,
-      "isTodayParticipated": false, // 오늘 불꽃을 켰는지 여부 (false면 클릭 유도)
-      "rewardAvailable": true,      // "+50 XP 받기" 가능 여부
-      // 월~일 요일별 달성 여부 (UI의 불꽃 아이콘 활성화용)
-      "weeklyStatus": [
-        { "day": "MON", "achieved": true },
-        { "day": "TUE", "achieved": true },
-        { "day": "WED", "achieved": true },
-        { "day": "THU", "achieved": true },
-        { "day": "FRI", "achieved": false }, // 미래거나 미달성
-        { "day": "SAT", "achieved": false },
-        { "day": "SUN", "achieved": false }
-      ]
-    },
-
-    // [Section 4] 우측 중단: DSR (게이지 차트)
-    "dsr": {
-      "dsrPercent": 24.0,
-      "gradeLabel": "안전",      // UI 뱃지 텍스트 (안전/주의/위험)
-      "gradeColor": "GREEN",    // UI 색상 코드 (GREEN, YELLOW, RED)
-      "financialInfo": {
-        "monthlyIncome": 4160000,
-        "existingLoanRepayment": 1000000, // 기존 상환
-        "availableCapacity": 664000       // 여력 (월소득의 40% - 기존 대출)
-      }
-    },
-
-    // [Section 5] 하단: 자산 성장 (라인 차트)
-    "assets": {
-      "totalAsset": 42500000,
-      "growthAmount": 37500000, // 30일 기준 증가액
-      "growthRate": 750.0,      // 증가율
-      // 차트용 데이터 배열 (최근 30일)
-      "chartData": [
-        { "date": "2025-11-01", "balance": 10000000 },
-        { "date": "2025-11-02", "balance": 10050000 },
-        // ... 중간 생략 ...
-        { "date": "2025-11-30", "balance": 42500000 }
-      ]
-    },
-
-    // [Section 6] 라이프스타일 쇼룸 (집짓기 시각화)
-    "showroom": {
-      "currentStep": 2,
-      "totalSteps": 7,
-      "stepTitle": "기둥 올리기",
-      "stepDescription": "튼튼한 골조가 올라가요.",
-      "imageUrl": "https://cdn.../house_step_02_isometric.png"
-    },
-
-    // [Section 7] Gap 분석 (Phase 2)
-    "gapAnalysis": {
-      "hasTarget": true,          // 목표 설정 여부
-      "targetAmount": 500000000,  // 목표 금액 (미설정 시 지역 평균)
-      "currentAssets": 30000000,  // 현재 자산 (온보딩 입력값)
-      "currentSavedAmount": 50000000, // 현재 저축액
-      "virtualLoanLimit": 420000000, // 추정 대출 한도
-      "requiredSavings": 0,       // 필요 저축액 (목표 - 자산 - 저축 - 대출한도)
-      "dsrMode": "PRO"            // DSR 모드 (LITE/PRO)
-    }
-
-  }
+  "buildTrack": "furniture",
+  "furnitureStage": 2,
+  "furnitureExp": 150
 }
 ```
 
 ---
 
-# 2. 아파트 API (5개) ✅
+# 3. 아파트 API (6개) ✅
 
-## 2-1. GET /api/apartments
-**아파트 목록 조회 (지도 핀 & 검색 리스트)**
+## 3-1. GET /api/apartments
+**아파트 목록 조회**
 
-- 변경점: 개별 거래(dealNo) 단위가 아니라 아파트 단지(aptSeq) 단위로 응답합니다.
-
-- 목적: 지도에 핀을 찍거나 검색 리스트를 보여줄 때, 같은 아파트가 여러 번 나오지 않게 합니다.
-
-- 데이터: 가격은 가장 최근 거래된 금액(recentPrice)을 대표값으로 노출합니다.
-
-### 요청
-```
-GET /api/apartments?keyword=현대&minPrice=30000&maxPrice=100000&swLat=37.5&swLng=126.9&neLat=37.6&neLng=127.0
-```
-
-### 쿼리 파라미터
-| **파라미터** | **설명** | **비고** |
-| --- | --- | --- |
-| `keyword` | 검색어 (아파트명/지역명) |  |
-| `minPrice` | 최소 가격 (만원) |  |
-| `maxPrice` | 최대 가격 (만원) |  |
-| `swLat`, `swLng` | 지도 남서쪽 좌표 | **[Map]** 현재 보고 있는 지도 영역만 조회 |
-| `neLat`, `neLng` | 지도 북동쪽 좌표 | **[Map]** |
-
-### 응답 (200 OK)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "조회 성공",
-  "data": {
-    "apartments": [
-      {
-        "aptSeq": "11410-61",
-        "aptNm": "금천현대",
-        "umdNm": "홍제동",
-        "roadNm": "연희로",
-        "buildYear": 2015,
-        "latitude": 37.5689043200000,
-        "longitude": 126.9341234000000,
-        "recentPrice": 450000,       // [변경] 가장 최근 거래 금액 (대표 가격)
-        "recentDealDate": "2024-11-15", // [추가] 그 가격이 언제 거래된 건지
-        "area": 84.5                  // [변경] 대표 면적 (또는 국민평형 기준)
-      },
-      {
-        "aptSeq": "11410-62",
-        "aptNm": "홍제삼성",
-        "umdNm": "홍제동",
-        "roadNm": "통일로",
-        "buildYear": 2010,
-        "latitude": 37.5701043200000,
-        "longitude": 126.9351234000000,
-        "recentPrice": 520000,
-        "recentDealDate": "2024-12-01",
-        "area": 84.5
-      }
-    ],
-    "totalCount": 15,
-    "page": 0,
-    "size": 10,
-    "totalPages": 2
-  }
-}
-```
-
----
-
-## 2-2. GET /api/apartments/{aptSeq}
+## 3-2. GET /api/apartments/{aptSeq}
 **아파트 상세 조회**
 
-### 요청
-```
-GET /api/apartments/11410-61
-```
-
-### 응답 (200 OK)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "조회 성공",
-  "data": {
-    // 1. 아파트 기본 정보
-    "aptInfo": {
-      "aptSeq": "11410-61",
-      "aptNm": "금천현대",
-      "umdNm": "홍제동",
-      "jibun": "서대문구 홍제동 123-45",
-      "roadNm": "연희로",
-      "roadNmBonbun": "10",
-      "roadNmBubun": "5",
-      "buildYear": 2015,
-      "latitude": 37.5689043200000,
-      "longitude": 126.9341234000000
-    },
-
-    // 2. 거래 내역 (그래프용 데이터) - 최신순 정렬 권장
-    "deals": [
-      {
-        "dealNo": 12345,
-        "dealDate": "2024-11-15",
-        "dealAmount": 450000,
-        "floor": "5",
-        "aptDong": "A",
-        "exclusiveArea": 84.5
-      },
-      {
-        "dealNo": 12346,
-        "dealDate": "2024-10-20",
-        "dealAmount": 430000,
-        "floor": "3",
-        "aptDong": "A",
-        "exclusiveArea": 84.5
-      },
-      {
-        "dealNo": 12340,
-        "dealDate": "2024-09-05",
-        "dealAmount": 420000,
-        "floor": "7",
-        "aptDong": "B",
-        "exclusiveArea": 84.5
-      }
-    ]
-  }
-}
-```
-
-### 에러
-- `404`: 아파트를 찾을 수 없음
-
----
-
-## 2-3. POST /api/apartments/favorites
+## 3-3. POST /api/apartments/favorites
 **관심 아파트 등록**
 
-### 요청
-```json
-{
-  "aptSeq": "11410-61"
-}
-```
-
-### 요청 필드
-| 필드 | 타입 | 필수 | 설명 | 예시 |
-|------|------|------|------|------|
-| aptSeq | string | O | 아파트 코드 | 11410-61 |
-
-### 응답 (201 Created)
-```json
-{
-  "code": 201,
-  "status": "CREATED",
-  "message": "관심 아파트로 등록되었습니다",
-  "data": {
-    "id": 42,             // 생성된 찜 고유 ID (DELETE 할 때 사용)
-    "aptSeq": "11410-61",
-    "aptNm": "금천현대",
-    "umdNm": "홍제동",
-    "recentPrice": 450000, // [New] 현재 시세 바로 확인
-    "area": 84.5,
-    "createdAt": "2024-11-15T14:30:25"
-  }
-}
-```
-
-### 인증
-- JWT Bearer Token 필수
-
-### 에러
-- `400`: 이미 등록된 관심 아파트 또는 유효하지 않은 요청
-- `401`: 인증 실패
-
----
-
-## 2-4. GET /api/apartments/favorites
+## 3-4. GET /api/apartments/favorites
 **관심 아파트 목록 조회**
 
-### 요청
-```
-GET /api/apartments/favorites
-Authorization: Bearer {accessToken}
-```
-
-### 응답 (200 OK)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "조회 성공",
-  "data": [
-    {
-      "id": 42,
-      "aptSeq": "11410-61",
-      "aptNm": "금천현대",
-      "umdNm": "홍제동",
-      "roadNm": "연희로",
-      "buildYear": 2015,
-      "recentPrice": 450000,
-      "latitude": 37.5689043200000,
-      "longitude": 126.9341234000000,
-      "createdAt": "2024-11-15T14:30:25"
-    },
-    {
-      "id": 43,
-      "aptSeq": "11410-62",
-      "aptNm": "독산삼성",
-      "umdNm": "독산동",
-      "roadNm": "금천로",
-      "buildYear": 2010,
-      "latitude": 37.4689043200000,
-      "longitude": 126.8341234000000,
-      "createdAt": "2024-11-14T10:20:15"
-    }
-  ]
-}
-```
-
-### 인증
-- JWT Bearer Token 필수
-
----
-
-## 2-5. DELETE /api/apartments/favorites/{id}
+## 3-5. DELETE /api/apartments/favorites/{id}
 **관심 아파트 삭제**
 
-### 요청
-```
-DELETE /api/apartments/favorites/42
-Authorization: Bearer {accessToken}
-```
+## 3-6. GET /api/apartments/regions/{regionName}/coordinates
+**지역 좌표 조회**
 
-### 경로 파라미터
-| 파라미터 | 타입 | 필수 | 설명 | 예시 |
-|---------|------|------|------|------|
-| id | number | O | 관심 아파트 ID | 42 |
-
-### 응답 (200 OK)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "관심 아파트 삭제 완료",
-  "data": null
-}
-```
-
-### 인증
-- JWT Bearer Token 필수
-
-### 권한
-- 본인의 관심 아파트만 삭제 가능
-
-### 에러
-- `400`: 본인의 관심 아파트가 아님
-- `401`: 인증 실패
-- `404`: 관심 아파트를 찾을 수 없음
+지역명(예: "강남구")으로 해당 지역의 중심 좌표(아파트 평균 위치)를 조회합니다.
 
 ---
 
-# 5. AI 매니저 API (Game Loop)  (3개)
+# 4. DSR 시뮬레이션 API (1개) ✅
 
-### 5-1. POST /api/ai-manager/analyze
+## 4-1. POST /api/simulation/dsr
+**DSR PRO 모드 시뮬레이션**
 
-**지출 분석 및 심문 시작**
+---
 
-- 영수증(이미지) 또는 내역(텍스트)을 보내면 AI가 분석하여 심문을 시작합니다.
+# 5. AI 매니저 API (4개) ✅
 
-### 요청
+## 5-1. POST /api/ai-manager/analyze
+**지출 분석 (수동/이미지)**
 
-- `MultipartFile` (image) 또는 JSON Body 사용
+- `Content-Type`: `application/json` (수동) 또는 `multipart/form-data` (이미지)
 
+### 요청 (JSON)
 ```json
-
 {
+  "inputMode": "MANUAL",
   "amount": 31000,
   "storeName": "치킨플러스",
   "category": "FOOD",
   "paymentDate": "2025-12-04",
-  "memo": "" // (선택) 유저가 미리 적은 메모
+  "memo": "야식"
 }
 ```
 
-### 응답 (200 OK)
+## 5-2. POST /api/ai-manager/confirm
+**추출 데이터 확인 (이미지 모드 후속)**
 
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "레제가 영수증을 분석했습니다.",
-  "data": {
-    "tempReceiptId": 501, // 2단계(판결) 요청 시 필요
-
-    // 1. 영수증 기본 정보 (화면 좌측 표시)
-    "receiptInfo": {
-      "amount": 31000,
-      "storeName": "치킨플러스",
-      "categoryLabel": "식비",
-      "date": "2025-12-04"
-    },
-
-    // 2. AI 페르소나 (심문 모드)
-    "persona": {
-      "mood": "STRICT", // 프론트: 팔짱 끼고 노려보는 이미지
-      "moodLabel": "매우 엄격함",
-      "script": "아, 지금 일일 돈 거 뭐야? 31,000원? 이번 달 돈표 자숙액까지 12만 원 남았는데, 진짜 괜찮겠어?"
-    },
-
-    // 3. 변명 선택지 (Chips) - 카테고리에 맞춰 동적 생성
-    "suggestedExcuses": [
-      {
-        "id": "STRESS",
-        "text": "🤯 스트레스 비용",
-        "type": "DEFENSE" // 방어형 변명
-      },
-      {
-        "id": "NEED",
-        "text": "🍖 필수 단백질 섭취",
-        "type": "DEFENSE"
-      },
-      {
-        "id": "ADMIT",
-        "text": "🏳️ 인정합니다 (빠른 자수)",
-        "type": "GIVE_UP" // 포기형 (페널티 감소 가능성)
-      }
-    ]
-  }
-}
-```
-
-### 3-2. POST /api/ai-manager/judgment
-
-**최종 판결 및 보상/벌칙 부여**
-
-- 유저의 변명을 듣고 최종 판결(합리/낭비)을 내리며 아이템을 지급합니다.
+이미지 분석(EXTRACTING 상태) 후, 사용자가 확인/수정한 데이터를 확정하여 분석을 진행합니다.
 
 ### 요청
-
 ```json
 {
-  "tempReceiptId": 501,
-  "selectedExcuseId": "STRESS", // 유저가 선택한 칩 ID
-  "customExcuse": "" // (선택) 직접 입력한 텍스트
+  "conversationId": 123,
+  "amount": 31000,
+  "storeName": "치킨플러스",
+  "category": "FOOD",
+  "paymentDate": "2025-12-04"
 }
 ```
 
-### 응답 Case 1: 성공 (합리적 소비 인정) -> 경험치 획득
+## 5-3. POST /api/ai-manager/judgment
+**최종 판결**
 
+### 요청
 ```json
 {
-  "code": 200,
-  "status": "OK",
-  "message": "판결 완료: 경험치 획득",
-  "data": {
-    // 1. 판결 결과
-    "judgment": {
-      "result": "REASONABLE",
-      "score": 85, // 합리성 점수
-      "comment": "스트레스 받아서 먹은 거라니 이번만 봐준다. 대신 내일은 아껴."
-    },
-
-    // 2. 성장(집 짓기) 피드백 - 핵심 변경 부분
-    "growth": {
-      "resultType": "SUCCESS", // SUCCESS(상승), FAIL(하락), KEEP(유지)
-      "expChange": 50,         // "+50" (화면에 크게 연출)
-      "currentExp": 1250,      // 현재 누적 경험치
-      "maxExp": 2000,          // 다음 레벨까지 필요한 경험치 (게이지 바 용도)
-      "level": 5,              // 현재 레벨
-      "levelLabel": "1층 골조 공사", // 레벨 이름
-      "isLevelUp": false       // true면 레벨업 축하 팝업/이펙트 실행
-    },
-
-    // 3. 레제 반응
-    "character": {
-      "mood": "NORMAL", // 화가 풀림
-      "script": "알았어, 먹고 힘내서 돈이나 더 벌어와.",
-      "animation": "NOD" // 고개 끄덕임
-    }
-  }
+  "conversationId": 123,
+  "selectedExcuseId": "STRESS",
+  "customExcuse": ""
 }
 ```
 
-### 응답 Case 2: 실패 (낭비 판정) -> 경험치 차감/패널티
-
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "판결 완료: 경험치 차감",
-  "data": {
-    // 1. 판결 결과
-    "judgment": {
-      "result": "WASTE",
-      "score": 10,
-      "comment": "핑계가 너무 구차해. 닭 뼈 보면서 반성이나 해."
-    },
-
-    // 2. 성장(집 짓기) 피드백
-    "growth": {
-      "resultType": "FAIL",
-      "expChange": -30,        // "-30" (화면 흔들림, 빨간색 연출)
-      "currentExp": 1220,      // 경험치 깎임
-      "maxExp": 2000,
-      "level": 5,
-      "levelLabel": "1층 골조 공사",
-      "isLevelUp": false,
-      "warning": "공사가 지연되고 있습니다!" // 추가 경고 메시지
-    },
-
-    // 3. 레제 반응
-    "character": {
-      "mood": "ANGRY", // 극대노
-      "script": "내 집이 늦게 지어지는 소리가 들리네? 정신 안 차려?",
-      "animation": "SHOUT" // 소리침/화냄
-    }
-  }
-}
-```
----
+## 5-4. GET /api/ai-manager/history
+**분석 내역 조회**
 
 ---
 
-# 6. 드림홈 API (2개)
+# 6. 드림홈 API (2개) ✅
 
 ## 6-1. POST /api/dream-home
-
-**드림홈 설정 및 변경**
-
-- **진입점:** 아파트 상세 조회(`GET /apartments/{id}`) 화면 하단 '목표 설정' 버튼.
-- **로직:** 유저는 **`aptSeq` (매물 ID)**와 본인의 **목표(금액/날짜)**만 보냅니다. 아파트의 이름, 위치, 시세 정보는 백엔드가 DB에서 직접 조회하여 저장합니다. (데이터 위변조 방지)
+**드림홈 설정**
 
 ### 요청
 ```json
 {
-  "aptSeq": "11410-61",      // 필수: 아파트 고유 ID
-  "targetAmount": 300000000, // 필수: 내가 모을 목표 원금 (단위: 원)
-  "targetDate": "2028-12-31",// 필수: 목표 날짜
-  "monthlyGoal": 2500000     // 선택: 월 목표 저축액 (프론트 계산값 저장용)
+  "aptSeq": "11410-61",
+  "targetAmount": 300000000,
+  "targetDate": "2028-12-31",
+  "monthlyGoal": 2500000,
+  "themeId": 1
 }
 ```
-
-### 응답 (200)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "드림홈 설정 완료",
-  "data": {
-    "dreamHome": {
-      "dreamHomeId": 10,
-      // 백엔드가 DB에서 조회해서 채워주는 정보
-      "aptSeq": "11410-61",
-      "propertyName": "금천현대",
-      "location": "서울 서대문구 홍제동",
-      "price": 850000000,   // 최신 실거래가
-
-      // 유저 설정 정보
-      "targetAmount": 300000000,
-      "monthlyGoal": 2500000,
-      "dDay": 1095,          // 남은 일수 (백엔드 계산)
-      "achievementRate": 0.0 // 초기 달성률
-    }
-  }
-}
-```
-
----
 
 ## 6-2. POST /api/dream-home/savings
+**저축 기록**
 
-**저축 기록 (진행률 업데이트 + 경험치 획득)**
-
-- **기능:** 목표 달성을 위해 저축을 기록합니다.
-- **보상:** 저축은 성실한 행동이므로 **경험치(성장)**를 지급합니다. (AI 매니저 API와 응답 구조 통일)
 ### 요청
 ```json
 {
-  "amount": 1000000,      // 저축할 금액
-  "saveType": "DEPOSIT",  // DEPOSIT(입금), WITHDRAW(출금/비상금사용)
+  "amount": 1000000,
+  "saveType": "DEPOSIT",
   "memo": "12월 월급 저축"
 }
 ```
 
-
-### 응답 (200)
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "저축 완료",
-  "data": {
-    // 1. 드림홈 현황 갱신
-    "dreamHomeStatus": {
-      "currentSavedAmount": 51000000, // 누적 저축액
-      "targetAmount": 300000000,
-      "achievementRate": 17.0         // (5100만 / 3억) * 100
-    },
-
-    // 2. 성장(집 짓기) 피드백 (AI 매니저와 동일 구조)
-    "growth": {
-      "resultType": "SUCCESS",
-      "expChange": 100,        // 저축은 큰 점수 (+100)
-      "currentExp": 1350,
-      "maxExp": 2000,
-      "level": 5,
-      "isLevelUp": false,      // 레벨업 시 true
-      "levelLabel": "1층 골조 공사"
-    }
-}
-```
-
 ---
-### **9-1. GET /api/collections**
 
-**내 컬렉션 목록 조회 (하단 썸네일 리스트)**
+# 7. 컬렉션 API (4개) ✅
 
-- **목적:** 사용자가 완공한 집들(트로피)을 리스트로 보여줍니다.
-- **특징:** 현재 '메인'으로 설정된 컬렉션이 무엇인지(`isMain`) 표시합니다.
+## 7-1. GET /api/collections
+**완성된 집 목록 조회**
 
+## 7-2. GET /api/collections/{id}/journey
+**저축 여정 상세 조회**
 
-**요청** : `GET /api/collections
-Authorization: Bearer {accessToken}`
+완성된 집의 Phase별 저축 기록 및 이벤트를 조회합니다.
 
-**응답** (200 OK)
+## 7-3. GET /api/collections/in-progress/journey
+**진행 중인 드림홈 여정 조회**
 
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "컬렉션 조회 성공",
-  "data": {
-    "collections": [
-      {
-        "collectionId": 101,
-        "houseName": "서울 강남 오피스텔",
-        "completedDate": "2024-11-20",
-        "thumbnailUrl": "https://cdn.../thumb_gangnam_offi.png",
-        "isMain": true // 현재 상단에 크게 떠 있는 집
-      },
-      {
-        "collectionId": 102,
-        "houseName": "부산 해운대 아파트",
-        "completedDate": "2024-08-15",
-        "thumbnailUrl": "https://cdn.../thumb_busan_apt.png",
-        "isMain": false
-      },
-      {
-        "collectionId": 103,
-        "houseName": "제주 애월 타운하우스",
-        "completedDate": "2024-05-01",
-        "thumbnailUrl": "https://cdn.../thumb_jeju_town.png",
-        "isMain": false
-      }
-    ]
-  }
-}
+현재 짓고 있는 집의 여정을 조회합니다.
 
-```
+## 7-4. PUT /api/collections/{id}/main-display
+**대표 컬렉션 설정**
 
 ---
 
-### **9-2. GET /api/collections/{collectionId}**
+# 8. 대시보드 API (1개) ✅
 
-**컬렉션 상세 조회 (상단 메인 뷰)**
-
-- **목적:** 하단 썸네일을 클릭했을 때, 상단에 **큰 이미지**와 **캐릭터(레제)**를 배치하기 위한 상세 정보입니다.
-
-**요청**
-`GET /api/collections/101`
-
-**응답 (200 OK)**
-```json
-{
-  "code": 200,
-  "status": "OK",
-  "message": "컬렉션 상세 조회 성공",
-  "data": {
-    "collectionId": 101,
-    "houseName": "서울 강남 오피스텔",
-    "description": "첫 번째로 완공한 나만의 오피스텔입니다.",
-    "fullImageUrl": "https://cdn.../full_gangnam_offi.png", // 고화질 배경
-
-    // 획득한 뱃지나 성과 (선택 사항)
-    "stats": {
-      "totalSaved": 150000000,
-      "durationDays": 365
-    }
-  }
-}
-```
+## 8-1. GET /api/users/dashboard
+**대시보드 통합 데이터 조회**
 
 ---
 
-### 구현 완료
-1. **인증 API (2개)** - 회원가입, 로그인 ✅
-2. **아파트 API (5개)** - 목록 조회, 상세 조회, 관심 관리 (3개) ✅
-3. **사용자 API (3개)** - 온보딩, 프로필, 대시보드 ✅
-4. **DSR API (1개)** - DSR PRO 시뮬레이션 ✅
+# 9. 스트릭 API (3개) ✅
 
-### 🔄 향후 개발 예정
-- AI 매니저 API (3개)
-- 드림홈 API (2개)
-- 컬렉션 API (2개)
+## 9-1. GET /api/streak/reward
+**수령 가능한 마일스톤 조회**
+
+## 9-2. POST /api/streak/reward
+**마일스톤 보상 수령**
+
+### 요청
+```json
+{
+  "milestoneDays": 7
+}
+```
+
+## 9-3. GET /api/streak/milestones
+**전체 마일스톤 상태 조회**
+
+---
+
+# 10. 테마 API (1개) ✅
+
+## 10-1. GET /api/themes
+**활성 테마 목록 조회**
+
+드림홈 설정 시 선택 가능한 하우스 테마 목록을 반환합니다.
