@@ -15,7 +15,7 @@
         <result property="monthlyGoal" column="monthly_goal"/>
         <result property="currentSavedAmount" column="current_saved_amount"/>
         <result property="startDate" column="start_date"/>
-        <result property="status" column="status" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="status" column="status" typeHandler="com.jipjung.project.global.mybatis.DreamHomeStatusTypeHandler"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
         <result property="isDeleted" column="is_deleted"/>
@@ -72,7 +72,8 @@
     <insert id="insert" parameterType="com.jipjung.project.domain.DreamHome"
             useGeneratedKeys="true" keyProperty="dreamHomeId" keyColumn="dream_home_id">
         INSERT INTO dream_home (user_id, apt_seq, target_amount, target_date, monthly_goal, current_saved_amount, start_date, status, house_name)
-        VALUES (#{userId}, #{aptSeq}, #{targetAmount}, #{targetDate}, #{monthlyGoal}, #{currentSavedAmount}, #{startDate}, #{status}, #{houseName})
+        VALUES (#{userId}, #{aptSeq}, #{targetAmount}, #{targetDate}, #{monthlyGoal}, #{currentSavedAmount}, #{startDate},
+                #{status, typeHandler=com.jipjung.project.global.mybatis.DreamHomeStatusTypeHandler}, #{houseName})
     </insert>
 
     <!-- 드림홈 상세 정보 업데이트 -->
@@ -89,7 +90,7 @@
     <!-- 드림홈 상태 업데이트 -->
     <update id="updateStatus">
         UPDATE dream_home
-        SET status = #{status},
+        SET status = #{status, typeHandler=com.jipjung.project.global.mybatis.DreamHomeStatusTypeHandler},
             updated_at = CURRENT_TIMESTAMP
         WHERE dream_home_id = #{dreamHomeId}
           AND is_deleted = false
